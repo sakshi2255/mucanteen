@@ -1,86 +1,99 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
-import { ChevronLeft, LogOut, ArrowRightLeft, User } from 'lucide-react-native';
-import { Colors } from '../../theme/colors';
-import { Spacing } from '../../theme/spacing';
-import { useAuth } from '../../context/AuthContext';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { ShoppingBag, User as UserIcon, Heart, Utensils } from 'lucide-react-native';
+import { colors, typography, spacing, borderRadius } from '../../config/theme';
 
 interface HeaderProps {
-  title: string;
+  title?: string;
   subtitle?: string;
-  showBack?: boolean;
-  onBack?: () => void;
-  rightAction?: React.ReactNode;
-  onRoleSwitchPress?: () => void;
-  showLogout?: boolean;
+  role?: string;
+  cartItemCount?: number;
+  favouritesCount?: number;
+  onPressProfile?: () => void;
+  onPressCart?: () => void;
+  onPressFavourites?: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
-  title,
-  subtitle,
-  showBack = false,
-  onBack,
-  rightAction,
-  onRoleSwitchPress,
-  showLogout = true,
+  title = 'MU CANTEEN',
+  subtitle = 'Marwadi University',
+  role = 'Student',
+  cartItemCount = 0,
+  favouritesCount = 0,
+  onPressProfile,
+  onPressCart,
+  onPressFavourites,
 }) => {
-  const { user, role, logout } = useAuth();
-
-  const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out from the MU Canteen portal?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Sign Out', style: 'destructive', onPress: () => logout() },
-      ]
-    );
-  };
-
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
-
-      {/* Main Bar */}
-      <View style={styles.navBar}>
-        <View style={styles.leftSection}>
-          {showBack && onBack && (
-            <TouchableOpacity onPress={onBack} style={styles.backButton} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-              <ChevronLeft size={26} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-          <View style={styles.titleContainer}>
-            <Text style={styles.title} numberOfLines={1}>
-              {title}
+      <View style={styles.leftContainer}>
+        <View style={styles.logoBadgeContainer}>
+          <View style={styles.logoBox}>
+            <Utensils size={16} color="#FFFFFF" />
+          </View>
+          <View style={styles.textContainer}>
+            <View style={styles.brandingRow}>
+              <Text style={styles.titleText}>{title}</Text>
+              {role ? (
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleBadgeText}>{role.toUpperCase()}</Text>
+                </View>
+              ) : null}
+            </View>
+            <Text style={styles.subtitleText} numberOfLines={1}>
+              {subtitle}
             </Text>
-            {subtitle ? <Text style={styles.subtitle} numberOfLines={1}>{subtitle}</Text> : null}
           </View>
         </View>
+      </View>
 
-        <View style={styles.rightSection}>
-          {rightAction ? rightAction : null}
+      <View style={styles.rightContainer}>
+        {onPressFavourites && (
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={onPressFavourites}
+            activeOpacity={0.7}
+            accessibilityLabel="Favourites"
+          >
+            <Heart size={20} color={favouritesCount > 0 ? colors.accentOrange : colors.textPrimary} fill={favouritesCount > 0 ? colors.accentOrange : 'none'} />
+            {favouritesCount > 0 && (
+              <View style={[styles.badge, styles.favBadge]}>
+                <Text style={styles.badgeText}>
+                  {favouritesCount > 9 ? '9+' : favouritesCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
 
-          {onRoleSwitchPress && (
-            <TouchableOpacity
-              onPress={onRoleSwitchPress}
-              style={styles.headerIconBtn}
-              accessibilityLabel="Switch Role"
-            >
-              <ArrowRightLeft size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
+        {onPressCart && (
+          <TouchableOpacity 
+            style={styles.iconButton} 
+            onPress={onPressCart}
+            activeOpacity={0.7}
+            accessibilityLabel="Shopping Cart"
+          >
+            <ShoppingBag size={20} color={colors.textPrimary} />
+            {cartItemCount > 0 && (
+              <View style={[styles.badge, styles.cartBadge]}>
+                <Text style={styles.badgeText}>
+                  {cartItemCount > 9 ? '9+' : cartItemCount}
+                </Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
 
-          {showLogout && user && (
-            <TouchableOpacity
-              onPress={handleLogout}
-              style={styles.logoutHeaderBtn}
-              accessibilityLabel="Sign Out"
-            >
-              <LogOut size={16} color="#FFFFFF" />
-            </TouchableOpacity>
-          )}
-        </View>
+        {onPressProfile && (
+          <TouchableOpacity 
+            style={[styles.iconButton, styles.profileButton]} 
+            onPress={onPressProfile}
+            activeOpacity={0.7}
+            accessibilityLabel="User Profile"
+          >
+            <UserIcon size={19} color={colors.primaryDark} />
+          </TouchableOpacity>
+        )}
       </View>
     </View>
   );
@@ -88,62 +101,103 @@ export const Header: React.FC<HeaderProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    backgroundColor: Colors.primary,
-    paddingTop: 45, // Safe space for top status bar
-    paddingBottom: Spacing.sm,
-    borderBottomLeftRadius: 16,
-    borderBottomRightRadius: 16,
-  },
-  navBar: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base,
-    minHeight: 48,
+    alignItems: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    backgroundColor: colors.surface,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
-  leftSection: {
+  leftContainer: {
+    flex: 1,
+  },
+  logoBadgeContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+  },
+  logoBox: {
+    width: 32,
+    height: 32,
+    borderRadius: borderRadius.md,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: spacing.sm,
+  },
+  textContainer: {
     flex: 1,
   },
-  backButton: {
-    marginRight: Spacing.sm,
-    padding: 2,
+  brandingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  titleContainer: {
-    flex: 1,
+  titleText: {
+    fontSize: 16,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.primaryDark,
+    letterSpacing: 0.5,
   },
-  title: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-    letterSpacing: -0.2,
+  roleBadge: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: borderRadius.sm,
+    marginLeft: spacing.xs,
   },
-  subtitle: {
-    color: 'rgba(255, 255, 255, 0.85)',
+  roleBadgeText: {
+    fontSize: 9,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.primaryDark,
+  },
+  subtitleText: {
     fontSize: 11,
-    marginTop: 1,
+    color: colors.textSecondary,
+    fontWeight: typography.fontWeights.medium,
   },
-  rightSection: {
+  rightContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginLeft: Spacing.sm,
-    gap: 8,
+    gap: spacing.xs,
   },
-  headerIconBtn: {
-    backgroundColor: 'rgba(255, 255, 255, 0.22)',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
+  iconButton: {
+    position: 'relative',
+    width: 38,
+    height: 38,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.backgroundSoft,
     justifyContent: 'center',
+    alignItems: 'center',
   },
-  logoutHeaderBtn: {
-    backgroundColor: 'rgba(239, 68, 68, 0.4)',
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: 'center',
+  profileButton: {
+    backgroundColor: colors.primaryLight,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -2,
+    minWidth: 17,
+    height: 17,
+    borderRadius: 9,
     justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 3,
+  },
+  cartBadge: {
+    backgroundColor: colors.accentOrange,
+  },
+  favBadge: {
+    backgroundColor: colors.accentYellow,
+  },
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: typography.fontWeights.heavy,
   },
 });

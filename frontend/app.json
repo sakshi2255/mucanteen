@@ -6,12 +6,8 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "backgroundColor": "#079FA7"
-    },
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.marwadiuniversity.mucanteen"
+      "supportsTablet": true
     },
     "android": {
       "package": "com.marwadiuniversity.mucanteen",
@@ -26,6 +22,11 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9aac454c-182a-4475-9336-ce8791beb676"
+      }
     }
   }
 }

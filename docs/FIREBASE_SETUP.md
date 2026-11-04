@@ -1,71 +1,66 @@
-# Firebase Configuration & Deployment Guide
+# Firebase Project Configuration & Setup
 
-This guide details how to connect MU Canteen to a live Google Firebase project.
-
-> [!NOTE]
-> If live Firebase credentials are not yet configured, the app runs in **Local Demo Mode** automatically with persistent storage and seed data.
-
----
-
-## 1. Firebase Console Setup
-
-1. Open the [Firebase Console](https://console.firebase.google.com/) and create a project named `mu-canteen`.
-2. Enable **Firebase Authentication**:
-   - Provider: **Email/Password**.
-3. Create a **Cloud Firestore Database**:
-   - Location: `asia-south1` (Mumbai) recommended for Marwadi University, Rajkot.
-   - Start in test mode or production mode.
+**Project Name:** MU Canteen  
+**Project ID:** `mu-canteen-b895a`  
+**Firestore Database:** `(default)`  
+**Authentication Provider:** Email/Password (Already Enabled)
 
 ---
 
-## 2. Frontend Configuration
+## 1. Firebase Project Credentials
 
-1. In `frontend/`, create `.env` based on `frontend/.env.example`:
-```bash
-EXPO_PUBLIC_FIREBASE_API_KEY=AIzaSy...
-EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN=mu-canteen.firebaseapp.com
-EXPO_PUBLIC_FIREBASE_PROJECT_ID=mu-canteen
-EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET=mu-canteen.appspot.com
-EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=...
-EXPO_PUBLIC_FIREBASE_APP_ID=1:...:android:...
-```
+The project is pre-configured with the official university project keys extracted from `google-services.json`:
 
-2. Register an Android Application in Firebase Console:
-   - Package Name: `com.marwadiuniversity.mucanteen`
-   - Download `google-services.json` if building standalone APKs via EAS Build.
-
----
-
-## 3. Backend Deployment
-
-Deploy Firestore Security Rules, Composite Indexes, and Cloud Functions using the Firebase CLI:
-
-```bash
-# Login to Firebase
-firebase login
-
-# Set your project
-firebase use mu-canteen
-
-# Deploy Firestore rules and composite indexes
-firebase deploy --only firestore
-
-# Deploy Cloud Functions
-firebase deploy --only functions
+```json
+{
+  "projectId": "mu-canteen-b895a",
+  "projectNumber": "231604059707",
+  "storageBucket": "mu-canteen-b895a.firebasestorage.app",
+  "authDomain": "mu-canteen-b895a.firebaseapp.com",
+  "appId": "1:231604059707:android:cabf8e38c301d1a3fc261e",
+  "androidPackage": "com.marwadiuniversity.mucanteen"
+}
 ```
 
 ---
 
-## 4. Local Firebase Emulators (Optional)
+## 2. Safe Deployment Procedures
 
-You can also run the backend locally using Firebase Local Emulator Suite:
+To preserve existing remote data, authentication accounts, and configurations, never execute destructive scripts or overwrite production without testing.
+
+### Step 2.1: Login to Firebase CLI
+```bash
+npx firebase login
+```
+
+### Step 2.2: Set Target Project
+```bash
+npx firebase use mu-canteen-b895a
+```
+
+### Step 2.3: Deploy Firestore Security Rules & Indexes
+```bash
+cd backend
+npx firebase deploy --only firestore:rules,firestore:indexes
+```
+
+### Step 2.4: Deploy Cloud Functions
+```bash
+cd backend
+npm run build
+npx firebase deploy --only functions
+```
+
+---
+
+## 3. Database Seeding Script
+
+To safely seed initial campus canteens, categories, and menu items to Firestore without wiping existing test users:
 
 ```bash
 cd backend
-firebase emulators:start
+npm run seed
 ```
-- Firestore Emulator: `http://localhost:8080`
-- Auth Emulator: `http://localhost:9099`
-- Functions Emulator: `http://localhost:5001`
-- Emulator UI: `http://localhost:4000`
+
+This verifies whether documents exist prior to writing and inserts default data idempotently.
 

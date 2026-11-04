@@ -1,121 +1,115 @@
-# Marwadi University — Canteen Evaluation & Demo Guide
+# Review 1 Evaluator Demo Instructions
 
-This guide is designed for project evaluators and professors reviewing the **MU Canteen** application (Major Project Milestone Review 1).
-
----
-
-## 1. Quick Start & Execution
-
-### A. Zero-Configuration Local Demo Mode (Recommended for Fast Evaluation)
-The mobile app is pre-configured with a complete, offline-persisted Local Demo Mode matching the Marwadi University campus:
-```bash
-# In the frontend directory:
-cd frontend
-npm install
-npm start
-```
-- Open on Android device via Expo Go or run `npm run android`.
-- No live Firebase keys are required; mock storage preserves state locally across reloads using `AsyncStorage`.
-
-### B. Live Firebase Mode & Database Seeding
-To run against a live Firebase project:
-1. Populate `frontend/.env` with your Firebase web configuration (see `frontend/.env.example`).
-2. Run the canonical database seeding script using the Firebase Admin SDK:
-```bash
-cd backend/functions
-npm install
-
-# Point to your downloaded Firebase Service Account JSON key:
-# On Windows PowerShell:
-$env:GOOGLE_APPLICATION_CREDENTIALS = "C:\path\to\serviceAccountKey.json"
-npm run seed
-
-# On Linux / macOS / Bash:
-GOOGLE_APPLICATION_CREDENTIALS="/path/to/serviceAccountKey.json" npm run seed
-```
-The idempotent script seeds:
-- 3 Buildings (Main Academic Building, Faculty of Law Building, Campus Hostel Block A)
-- 10 Canteens (9 MB canteens including Faculty Lounge + Law Canteen + Hostel Mess)
-- 20+ authentic Indian menu items with dietary tags, preparation times, and prices in INR (₹)
-- Standard university demo users (Student, Faculty, Operator, Administrator)
-- University campus policies and grace period settings
+**Project:** MU Canteen  
+**Demonstration Scope:** Review 1 Academic Evaluation  
+**Audience:** Faculty Project Reviewers & Evaluators
 
 ---
 
-## 2. Automated Test Verification
+## 1. Fast Role Switching for Evaluators
 
-Both frontend and backend provide automated test suites covering all business logic, invariants, and security rules:
-
-```bash
-# 1. Frontend business logic & UI invariants (13/13 tests)
-cd frontend
-npm test
-
-# 2. Frontend TypeScript typecheck (0 errors)
-npm run typecheck
-
-# 3. Backend security rules & operator state machine (7/7 tests)
-cd ../backend/functions
-npm test
-
-# 4. Backend Cloud Functions build (0 errors)
-npm run build
-```
+To test all four user personas without logging out and re-entering credentials repeatedly, the application provides a **1-Tap Role Switcher**:
+1. Open the application. On the **Login Screen**, a prominent banner labeled `QUICK REVIEW LOGIN (1-TAP)` is available:
+   - **Student (Aarav Patel)**: Demonstrates the student food ordering experience.
+   - **Faculty (Prof. Rajesh)**: Demonstrates access to the exclusive Main Building Floor 3 Faculty Canteen.
+   - **Operator (F1 Canteen)**: Demonstrates the real-time kitchen queue and menu toggling.
+   - **Admin (Campus Director)**: Demonstrates campus-wide oversight and audit logs.
+2. At any point while using the app, go to **Profile** tab to switch roles dynamically.
 
 ---
 
-## 3. Demo Persona Switcher
+## 2. Test Script 1: Instant Order Placement & Daily Token Allocation
 
-Switch between personas instantaneously via the top Demo Mode banner or on the Sign In screen:
-
-| Persona | Name & Email | Role & Key Capabilities |
-| :--- | :--- | :--- |
-| **Student** | **Sakshi Patel**<br>`student@marwadiuniversity.ac.in` | Browse 10 campus canteens, filter by floor, add to cart (single-canteen rule), place instant/preorders, accept 10-min grace policy, view live order progress & pickup tokens, cancel while in queue. |
-| **Faculty** | **Prof. Rajesh Sharma**<br>`faculty@marwadiuniversity.ac.in` | All student ordering capabilities + exclusive access to the **Faculty Executive Lounge (Main Bldg Floor 3)** (restricted for students). |
-| **Operator 1** | **Ramesh Bhai**<br>`operator1@marwadiuniversity.ac.in` | Assigned to **Stationery & Quick Bites** (Floor 1) and **Central Campus Canteen** (Floor 2). Manage canteen Open/Close, linear kitchen queue (`Accept → Ready → Collected`), counter pickup token verification. |
-| **Operator 2** | **Suresh Bhai**<br>`operator2@marwadiuniversity.ac.in` | Assigned to **Faculty Executive Lounge** (Floor 3) and **South Indian Hub** (Floor 4). |
-| **Administrator** | **Campus Admin Officer**<br>`admin@marwadiuniversity.ac.in` | Campus buildings and floor management, configure canteen types, assign operators, audit logs. |
+1. **Sign In as Student (Aarav Patel)**.
+2. On the **Food Home Screen**, notice:
+   - MU Teal branding (`#079FA7`).
+   - Pure Veg filter toggle and Available Now filter.
+   - Horizontal category bar (Quick Bites, South Indian, Thali, etc.).
+   - Tap the floating circular **MENU** button at the bottom-right: notice the sleek dark bottom sheet showing category names and item counts (matching Swiggy reference layout).
+3. Tap **ADD** on `Aloo Samosa (2 Pcs)` and `Masala Chai`.
+4. Notice the **Sticky Cart Bar** appears at the bottom with item count and total.
+5. Tap **VIEW CART**.
+6. Select **Instant Order**.
+7. Tap **Place Order**.
+8. **Result**:
+   - Order is created and assigned a numeric token (e.g. **#1** or **#2**).
+   - The student is transitioned to the **Order Tracking Screen** with a prominent token badge and live progress indicator showing `In Queue`.
 
 ---
 
-## 4. Key Walkthrough Evaluation Flows
+## 3. Test Script 2: Multi-Device Shared Queue & Operator State Machine
 
-### Flow A: Student Instant Order & Linear Operator Queue
-1. Log in as **Sakshi Patel (Student)**.
-2. Under "Browse Canteens", select **Canteen 1 (Stationery & Quick Bites)** on Main Building Floor 1.
-3. Add an *Aloo Masala Puff* (₹25) and *Cutting Masala Tea* (₹15) to your cart.
-4. Open **My Cart**. Ensure order type is **Instant Order**.
-5. Proceed to Checkout. Choose **Simulated UPI** (or Cash at Counter).
-6. Confirm order. Note the generated **Pickup Token** (e.g. `MU-4892`).
-7. Switch to **Ramesh Bhai (Operator)**. Tap **Order Queue** on the operator dashboard.
-8. **In Queue Stage**: Observe incoming order with buttons **[Accept]** and **[Decline]**.
-9. Tap **[Accept]**: The order transitions directly into **Preparing** (no redundant extra button).
-10. **Preparing Stage**: Observe the single button **[Ready]**. Tap **[Ready]**.
-11. **Ready Stage**: The order moves to Ready for Pickup with the single button **[Collected]**.
-12. Tap **[Collected]**: A token verification dialog opens. Enter `MU-4892` and confirm.
-13. The order transitions to **Picked Up**. Re-entering the token is rejected as duplicate collection.
+1. Switch role to **Canteen Operator (F1 Canteen)**.
+2. On the **Operator Dashboard**, observe:
+   - Serving Status toggle (Open / Closed).
+   - In Queue, Preparing, Ready, and Revenue metrics.
+3. Tap **Live Order Queue**.
+4. In the **Active Queue** tab, the student's order appears instantly:
+   - Displays Token `#`, Customer Name, Items ordered, and Total.
+   - Notice the two contextual action buttons: `[Decline]` and `[Accept (Start Prep)]`.
+5. Tap `[Accept (Start Prep)]`:
+   - Order status immediately updates to `Preparing` in Cloud Firestore.
+   - Next button changes to `[Mark Ready for Pickup]`.
+6. Tap `[Mark Ready for Pickup]`:
+   - Order status transitions to `Ready for Pickup`.
+   - Next button changes to `[Verify & Mark Collected]`.
+7. Switch back to **Student** role and open **Order Tracking**:
+   - Student's screen automatically reflects `Ready for Pickup - Proceed to canteen counter` without manual refresh!
+8. Return to **Operator**, tap `[Verify & Mark Collected]`:
+   - Operator confirms token and marks order as `Picked Up`.
+   - Order moves cleanly to the `Completed` tab.
 
-### Flow B: Student Preorder & Policy Acceptance
-1. Select **Canteen 2 (Central Campus Canteen)** on Main Building Floor 2.
-2. Add a *Mumbai Veg Grilled Sandwich* (₹70) to your cart.
-3. In Cart, toggle order type to **Preorder**.
-4. Select a slot (e.g. `12:45 PM - 01:00 PM`).
-5. Tap **Proceed to Checkout**. The **Preorder & Pickup Policy Modal** opens:
-   - Explains the 10-minute collection window after pickup time.
-   - Explains that uncollected food will be discarded and a ₹10 fee may apply.
-   - Notice the **[Accept & Continue]** button is disabled.
-6. Check the mandatory acceptance checkbox. **[Accept & Continue]** becomes active.
-7. Tap **[Accept & Continue]** to proceed, or tap **[Decline]** to revert to an Instant Order without reserving the slot.
+---
 
-### Flow C: Cancellation Cutoff Enforcement
-1. Place an order as a student.
-2. While the order is still **In Queue** (`awaiting_acceptance`), open **Current Orders** -> **Track Order**.
-3. Notice the **Request Cancellation** option is active.
-4. Once the operator taps **[Accept]** (moving the order into **Preparing**), open tracking again: cancellation is strictly locked and cannot be cancelled because kitchen cooking has already begun.
+## 4. Test Script 3: Preorder with Policy Agreement & Small-Screen Scroll Fix
 
-### Flow D: Operator Pre-Opening Availability Review
-1. Log in as **Ramesh Bhai (Operator)**.
-2. Toggle the Canteen switch to **OPEN**.
-3. Notice the mandatory **Availability Checklist Modal** appears before publishing opening status.
-4. Toggle items Available or Sold Out (e.g. mark Samosas Sold Out) and tap **Confirm & Open**.
-5. Students browsing the menu immediately see Samosas disabled with a **SOLD OUT** badge.
+1. Switch to **Student** role.
+2. Open menu, add `Mysore Masala Dosa` or `Deluxe Gujarati Thali`.
+3. In cart, switch ordering mode to **Preorder for Break**.
+4. Select a campus slot: `12:45 PM (Lunch Break)`.
+5. Tap **Review Policy & Checkout**.
+6. The **Preorder Policy Screen** opens:
+   - Notice smooth, uninterrupted vertical scrolling on small screens.
+   - Action buttons (`Decline` and `Accept & Place Order`) remain securely docked at the bottom.
+   - The `Accept & Place Order` button is disabled by default.
+7. Attempt to tap Accept: disabled.
+8. Check the mandatory checkbox: *"I have read, understood, and explicitly agree to the Marwadi University Preorder Policy."*
+9. Tap **Accept & Place Order**:
+   - Order is recorded with preorder pickup time and policy timestamp.
+   - Token is allocated and student transitions to tracking screen.
+
+---
+
+## 5. Test Script 4: Faculty Canteen Eligibility Enforcement
+
+1. Switch role to **Student (Aarav Patel)**.
+2. Tap **Canteens** tab.
+3. Select **Main Building F3 — Executive Faculty Canteen**.
+4. Notice the restriction prompt: access is blocked for non-faculty students.
+5. Switch role to **Faculty (Prof. Rajesh)**.
+6. Open the Faculty Canteen: access is granted!
+7. Faculty menu items (e.g. *Executive Special Thali*, *South Indian Filter Kaapi*) can be added and ordered.
+
+---
+
+## 6. Test Script 5: Operator Menu Availability Toggle
+
+1. In **Operator** console, tap **Menu Availability**.
+2. Toggle `Aloo Samosa` to **SOLD OUT**.
+3. Switch back to **Student** role:
+   - Samosa immediately displays a prominent dark `SOLD OUT` overlay.
+   - The `ADD` button is replaced with an `Unavailable` badge, preventing new orders.
+4. Toggle back to **AVAILABLE** from operator console: immediately re-enabled.
+
+---
+
+## 7. Test Script 6: Administrator Campus Oversight & Audit Logs
+
+1. Switch role to **Administrator (Campus Director)**.
+2. On **Admin Dashboard**, review campus-wide metrics across all 10 dining points.
+3. Tap **Campus-Wide Order Monitor**:
+   - Observe live real-time orders stream across all canteens with Canteen filter pills.
+4. Tap **System Audit Logs**:
+   - View immutable, timestamped event log capturing every order creation, state transition (`ORDER_STATUS_PREPARING`, `ORDER_STATUS_READY_FOR_PICKUP`), and menu toggle.
+   - Filter logs by Entity: Orders, Menu Items, or Canteens.
+

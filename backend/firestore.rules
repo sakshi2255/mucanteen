@@ -2,8 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --- Helper Functions ---
-    function isSignedIn() {
+    // Helper functions
+    function isAuthenticated() {
       return request.auth != null;
     }
 
@@ -11,125 +11,132 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    function getUserRole() {
-      return getUserData().role;
+    function isRole(role) {
+      return isAuthenticated() && getUserData().role_id == role;
     }
 
     function isAdmin() {
-      return isSignedIn() && getUserRole() == 'admin';
+      return isRole('admin');
     }
 
     function isOperator() {
-      return isSignedIn() && getUserRole() == 'operator';
+      return isRole('operator');
     }
 
-    function isAssignedOperator(canteenId) {
-      return isAdmin() || (
-        isOperator() &&
-        canteenId in getUserData().assignedCanteenIds
-      );
+    function isOperatorForCanteen(canteenId) {
+      return isAuthenticated() && 
+        (isAdmin() || (isOperator() && canteenId in getUserData().assigned_canteen_ids));
     }
 
-    // --- Users Collection ---
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Users collection
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      // Students cannot promote themselves to admin
-      allow create: if isSignedIn() && request.auth.uid == userId &&
-        (request.resource.data.role != 'admin' || isAdmin());
-      allow update: if isSignedIn() && (
-        isAdmin() || (
-          request.auth.uid == userId &&
-          request.resource.data.role == resource.data.role &&
-          request.resource.data.accountStatus == resource.data.accountStatus
-        )
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (
+        isAdmin() || 
+        (request.auth.uid == userId && 
+         // Prevent non-admin users from escalating their own role or changing assigned canteens
+         request.resource.data.role_id == resource.data.role_id &&
+         request.resource.data.assigned_canteen_ids == resource.data.assigned_canteen_ids)
       );
       allow delete: if isAdmin();
     }
 
-    // --- Campus Buildings & Floors ---
-    match /buildings/{buildingId} {
-      allow read: if isSignedIn();
+    // Roles collection
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
 
-    // --- Canteens ---
+    // Buildings collection
+    match /buildings/{buildingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Canteens collection
     match /canteens/{canteenId} {
-      allow read: if isSignedIn();
+      allow read: if isAuthenticated();
+      allow update: if isOperatorForCanteen(canteenId) || isAdmin();
       allow create, delete: if isAdmin();
-      allow update: if isAdmin() || isAssignedOperator(canteenId);
     }
 
-    // --- Menu Items ---
+    // Menu Categories collection
+    match /menuCategories/{categoryId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    // Menu Items collection
     match /menuItems/{itemId} {
-      allow read: if isSignedIn();
-      allow create, delete: if isAdmin() || isAssignedOperator(request.resource.data.canteenId);
-      allow update: if isAdmin() || isAssignedOperator(resource.data.canteenId);
+      allow read: if isAuthenticated();
+      allow update: if (
+        isAdmin() || 
+        (isOperator() && isOperatorForCanteen(resource.data.canteen_id))
+      );
+      allow create, delete: if isAdmin();
     }
 
-    // --- Orders Collection ---
+    // Orders collection — SHARED MULTI-DEVICE ORDER QUEUE
     match /orders/{orderId} {
-      allow read: if isSignedIn() && (
-        resource.data.userId == request.auth.uid ||
-        isAssignedOperator(resource.data.canteenId) ||
+      // Students read only their own orders
+      // Operators read all orders placed at their assigned canteen
+      // Admins read all orders
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid ||
+        isOperatorForCanteen(resource.data.canteen_id) ||
         isAdmin()
       );
 
-      // Student places order (In Queue or auto-accepted to Preparing)
-      allow create: if isSignedIn() &&
-        request.resource.data.userId == request.auth.uid &&
-        request.resource.data.orderStatus in ['awaiting_acceptance', 'preparing'];
+      // Order creation
+      allow create: if isAuthenticated() && 
+        request.resource.data.user_id == request.auth.uid;
 
-      // State transitions validation
-      allow update: if isSignedIn() && (
+      // Status updates
+      allow update: if isAuthenticated() && (
         isAdmin() ||
-        // Operator actions: Accept (to Preparing), Decline (to Rejected), Ready, Collected (Picked Up)
-        (
-          isAssignedOperator(resource.data.canteenId) &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'orderStatus', 'isTokenVerified', 'updatedAt', 'rejectionReason', 'paymentStatus', 'readyAt'
-          ])
-        ) ||
-        // Student cancellation ONLY before kitchen preparation begins (In Queue)
-        (
-          resource.data.userId == request.auth.uid &&
-          request.resource.data.orderStatus == 'cancelled' &&
-          resource.data.orderStatus == 'awaiting_acceptance' &&
-          request.resource.data.diff(resource.data).affectedKeys().hasOnly([
-            'orderStatus', 'cancellationRequestedAt', 'cancellationReason', 'updatedAt', 'paymentStatus'
-          ])
-        )
+        isOperatorForCanteen(resource.data.canteen_id) ||
+        (resource.data.user_id == request.auth.uid && 
+         request.resource.data.order_status == 'cancelled' && 
+         resource.data.order_status == 'awaiting_acceptance')
       );
 
       allow delete: if isAdmin();
     }
 
-    // --- Order Events (Immutable Append-Only Audit Trail) ---
-    match /orderEvents/{eventId} {
-      allow read: if isSignedIn() && (
-        isAdmin() ||
-        isOperator() ||
-        resource.data.actorId == request.auth.uid
-      );
-      allow create: if isSignedIn();
-      allow update, delete: if false; // Immutable!
+    // Order Counters collection
+    match /orderCounters/{canteenId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
     }
 
-    // --- Campus & Canteen Settings ---
-    match /settings/{settingId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
-    }
-
-    match /canteenSettings/{canteenId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin() || isAssignedOperator(canteenId);
-    }
-
-    // --- Audit Logs ---
+    // Audit Logs — Append-only, privileged read
     match /auditLogs/{logId} {
       allow read: if isAdmin();
-      allow create: if isSignedIn();
-      allow update, delete: if false; // Tamper-evident
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // strictly immutable and append-only
+    }
+
+    // Daily Revenue collection
+    match /dailyRevenue/{revenueId} {
+      allow read: if isOperatorForCanteen(resource.data.canteen_id) || isAdmin();
+      allow write: if isOperatorForCanteen(request.resource.data.canteen_id) || isAdmin();
+    }
+
+    // Payments History collection
+    match /paymentsHistory/{paymentId} {
+      allow read: if isAuthenticated() && (
+        resource.data.user_id == request.auth.uid || 
+        isOperatorForCanteen(resource.data.canteen_id) || 
+        isAdmin()
+      );
+      allow create: if isAuthenticated();
+      allow update, delete: if isAdmin();
     }
   }
 }
+
