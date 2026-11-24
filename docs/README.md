@@ -59,7 +59,7 @@ The workspace root contains strictly the three required folders:
 ```text
 MU-Canteen/
 │
-├── frontend/    # React Native / Expo Android application
+├── Frontend/    # React Native / Expo Android application
 ├── backend/     # Firebase Cloud Functions, rules, indexes, & seed scripts
 └── docs/        # Complete architectural & operational documentation
 ```

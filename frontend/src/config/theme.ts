@@ -100,7 +100,6 @@ export const shadows = {
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.14,
     shadowRadius: 10,
-    elevation: 6,
     elevation: 8,
   },
 };

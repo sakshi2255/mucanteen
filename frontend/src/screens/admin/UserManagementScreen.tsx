@@ -1,29 +1,103 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  FlatList, 
-  TouchableOpacity,
-  SafeAreaView 
-} from 'react-native';
-import { ArrowLeft, User, Shield, CreditCard, Mail } from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
-import { DEMO_PROFILES } from '../../services/seedData';
+import React, { useState, useEffect } from 'react';
+import { View, Text, FlatList, TouchableOpacity, Modal, TextInput, ScrollView, Alert, ActivityIndicator } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ArrowLeft, User, Plus, X, Edit2 } from 'lucide-react-native';
+import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
+import { colors } from '../../config/theme';
+import { styles } from '../../styles/admin/UserManagementStyles';
+import { modalStyles } from '../../styles/admin/UserManagementModalStyles';
 import type { UserProfile, UserRole } from '../../models/types';
 
-interface UserManagementScreenProps {
-  navigation: any;
-}
+interface UserManagementScreenProps { navigation: any; }
 
 export const UserManagementScreen: React.FC<UserManagementScreenProps> = ({ navigation }) => {
-  const [selectedRole, setSelectedRole] = useState<string>('all');
-  const [users, setUsers] = useState<UserProfile[]>(DEMO_PROFILES);
+  const [selectedRoleFilter, setSelectedRoleFilter] = useState<string>('all');
+  const [users, setUsers] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Modal State
+  const [modalVisible, setModalVisible] = useState(false);
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  
+  // Form State
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    enrollment_number: '',
+    role_id: 'student' as UserRole,
+  });
+
+  // Real-time listener for users
+  useEffect(() => {
+    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
+      const usersList: UserProfile[] = [];
+      snapshot.forEach((doc) => {
+        usersList.push({ ...doc.data() } as UserProfile);
+      });
+      setUsers(usersList);
+      setLoading(false);
+    }, (error) => {
+      console.error("Error fetching users:", error);
+      setLoading(false);
+    });
+    return unsub;
+  }, []);
 
   const filteredUsers = users.filter((u) => {
-    if (selectedRole === 'all') return true;
-    return u.role_id === selectedRole;
+    if (selectedRoleFilter === 'all') return true;
+    return u.role_id === selectedRoleFilter;
   });
+
+  const openAddModal = () => {
+    setEditingUser(null);
+    setFormData({ name: '', email: '', enrollment_number: '', role_id: 'student' });
+    setModalVisible(true);
+  };
+
+  const openEditModal = (user: UserProfile) => {
+    setEditingUser(user);
+    setFormData({
+      name: user.name,
+      email: user.email,
+      enrollment_number: user.enrollment_number || '',
+      role_id: user.role_id,
+    });
+    setModalVisible(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!formData.name || !formData.email) {
+      Alert.alert('Error', 'Name and Email are required.');
+      return;
+    }
+
+    try {
+      const userId = editingUser ? editingUser.user_id : formData.email.split('@')[0]; // Simple ID generator for manual adds
+      const userRef = doc(db, 'users', userId);
+      
+      const payload: UserProfile = {
+        user_id: userId,
+        name: formData.name,
+        email: formData.email,
+        enrollment_number: formData.enrollment_number || '',
+        role_id: formData.role_id,
+        created_at: editingUser ? editingUser.created_at : new Date().toISOString(),
+        assigned_canteen_ids: editingUser ? editingUser.assigned_canteen_ids : [],
+        favourite_canteen_ids: editingUser ? editingUser.favourite_canteen_ids : [],
+        role: 'Faculty',
+        account_status: 'active',
+        is_deleted: false,
+        updated_at: ''
+      };
+
+      await setDoc(userRef, payload, { merge: true });
+      setModalVisible(false);
+    } catch (error) {
+      console.error("Error saving user:", error);
+      Alert.alert('Error', 'Failed to save user data.');
+    }
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -32,170 +106,89 @@ export const UserManagementScreen: React.FC<UserManagementScreenProps> = ({ navi
           <ArrowLeft size={22} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>User & Role Management</Text>
-        <View style={{ width: 22 }} />
+        <TouchableOpacity onPress={openAddModal} style={{ padding: 4 }}>
+          <Plus size={24} color={colors.primary} />
+        </TouchableOpacity>
       </View>
 
-      {/* Role Filter Tabs */}
       <View style={styles.filterTabs}>
-        {['all', 'student', 'faculty', 'operator', 'admin'].map((r) => {
-          const isSelected = selectedRole === r;
-          return (
-            <TouchableOpacity
-              key={r}
-              style={[styles.tab, isSelected && styles.activeTab]}
-              onPress={() => setSelectedRole(r)}
-            >
-              <Text style={[styles.tabText, isSelected && styles.activeTabText]}>
-                {r.toUpperCase()}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+        <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+          {['all', 'student', 'faculty', 'operator', 'admin'].map((r) => {
+            const isSelected = selectedRoleFilter === r;
+            return (
+              <TouchableOpacity key={r} style={[styles.tab, isSelected && styles.activeTab]} onPress={() => setSelectedRoleFilter(r)}>
+                <Text style={[styles.tabText, isSelected && styles.activeTabText]}>{r.toUpperCase()}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      <FlatList
-        data={filteredUsers}
-        keyExtractor={(item) => item.user_id}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        renderItem={({ item }) => (
-          <View style={styles.userCard}>
-            <View style={styles.userHeader}>
-              <View style={styles.userAvatar}>
-                <User size={18} color={colors.primaryDark} />
+      {loading ? (
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+          <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : (
+        <FlatList
+          data={filteredUsers}
+          keyExtractor={(item) => item.user_id}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          renderItem={({ item }) => (
+            <View style={styles.userCard}>
+              <View style={styles.userHeader}>
+                <View style={styles.userAvatar}><User size={18} color={colors.primaryDark} /></View>
+                <View style={{ flex: 1, marginLeft: 12 }}>
+                  <Text style={styles.userName}>{item.name}</Text>
+                  <Text style={styles.userEmail}>{item.email}</Text>
+                </View>
+                <TouchableOpacity onPress={() => openEditModal(item)} style={{ padding: 4, marginRight: 8 }}>
+                  <Edit2 size={16} color={colors.textMuted} />
+                </TouchableOpacity>
+                <View style={styles.roleBadge}>
+                  <Text style={styles.roleBadgeText}>{item.role_id.toUpperCase()}</Text>
+                </View>
               </View>
-              <View style={{ flex: 1, marginLeft: spacing.sm }}>
-                <Text style={styles.userName}>{item.name}</Text>
-                <Text style={styles.userEmail}>{item.email}</Text>
-              </View>
-              <View style={styles.roleBadge}>
-                <Text style={styles.roleBadgeText}>{item.role_id.toUpperCase()}</Text>
-              </View>
-            </View>
 
-            <View style={styles.metaRow}>
-              <Text style={styles.metaLabel}>ID / Enrollment: </Text>
-              <Text style={styles.metaValue}>{item.enrollment_number}</Text>
-            </View>
-
-            {item.assigned_canteen_ids && item.assigned_canteen_ids.length > 0 && (
               <View style={styles.metaRow}>
-                <Text style={styles.metaLabel}>Assigned Canteen: </Text>
-                <Text style={styles.metaValue}>{item.assigned_canteen_ids.join(', ')}</Text>
+                <Text style={styles.metaLabel}>ID / Enrollment: </Text>
+                <Text style={styles.metaValue}>{item.enrollment_number || 'N/A'}</Text>
               </View>
-            )}
+            </View>
+          )}
+        />
+      )}
+
+      {/* Add / Edit User Modal */}
+      <Modal visible={modalVisible} animationType="slide" transparent={true}>
+        <View style={modalStyles.overlay}>
+          <View style={modalStyles.sheet}>
+            <View style={modalStyles.sheetHeader}>
+              <Text style={modalStyles.sheetTitle}>
+                {editingUser ? 'Edit User Profile' : 'Add New User'}
+              </Text>
+              <TouchableOpacity onPress={() => setModalVisible(false)}><X size={24} color={colors.textSecondary} /></TouchableOpacity>
+            </View>
+
+            <TextInput style={modalStyles.input} placeholder="Full Name" value={formData.name} onChangeText={(t) => setFormData({ ...formData, name: t })} />
+            <TextInput style={modalStyles.input} placeholder="Email Address" value={formData.email} keyboardType="email-address" autoCapitalize="none" onChangeText={(t) => setFormData({ ...formData, email: t })} />
+            <TextInput style={modalStyles.input} placeholder="Enrollment / ID (Optional)" value={formData.enrollment_number} onChangeText={(t) => setFormData({ ...formData, enrollment_number: t })} />
+            
+            <Text style={modalStyles.roleLabel}>Assign Role:</Text>
+            <View style={modalStyles.roleRow}>
+              {(['student', 'faculty', 'operator', 'admin'] as UserRole[]).map((r) => (
+                <TouchableOpacity key={r} style={[modalStyles.roleChip, formData.role_id === r && modalStyles.roleChipActive]} onPress={() => setFormData({ ...formData, role_id: r })}>
+                  <Text style={[modalStyles.roleChipText, formData.role_id === r && modalStyles.roleChipTextActive]}>{r.toUpperCase()}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TouchableOpacity style={modalStyles.saveBtn} onPress={handleSaveUser}>
+              <Text style={modalStyles.saveBtnText}>{editingUser ? 'Save Changes' : 'Create User'}</Text>
+            </TouchableOpacity>
           </View>
-        )}
-      />
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  backBtn: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  filterTabs: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    backgroundColor: colors.surface,
-    gap: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  tab: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 5,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.surfaceAlt,
-  },
-  activeTab: {
-    backgroundColor: colors.primary,
-  },
-  tabText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  activeTabText: {
-    color: '#FFFFFF',
-  },
-  listContent: {
-    padding: spacing.lg,
-    gap: spacing.sm,
-  },
-  userCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    ...shadows.sm,
-  },
-  userHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  userAvatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  userName: {
-    fontSize: typography.fontSizes.sm,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  userEmail: {
-    fontSize: 11,
-    color: colors.textMuted,
-  },
-  roleBadge: {
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: borderRadius.sm,
-  },
-  roleBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.primaryDark,
-  },
-  metaRow: {
-    flexDirection: 'row',
-    marginTop: 4,
-  },
-  metaLabel: {
-    fontSize: 11,
-    color: colors.textSecondary,
-  },
-  metaValue: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-});
-

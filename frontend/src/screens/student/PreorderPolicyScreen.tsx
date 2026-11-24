@@ -2,27 +2,24 @@ import React, { useState } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   ScrollView, 
   TouchableOpacity, 
   ActivityIndicator, 
-  Alert, 
-  SafeAreaView 
+  Alert 
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
   ShieldCheck, 
-  Clock, 
-  AlertTriangle, 
   CheckSquare, 
   Square, 
-  ArrowLeft,
-  X 
+  ArrowLeft
 } from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+import { colors } from '../../config/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
 import { createOrderInFirestore } from '../../services/firestoreService';
 import { INITIAL_CANTEENS } from '../../services/seedData';
+import { styles } from '../../styles/student/PreorderPolicyStyles';
 
 interface PreorderPolicyScreenProps {
   navigation: any;
@@ -80,7 +77,6 @@ export const PreorderPolicyScreen: React.FC<PreorderPolicyScreenProps> = ({ navi
       Alert.alert('Agreement Required', 'You must agree to the 6-point preorder policy before placing your order.');
       return;
     }
-
     if (!user) {
       Alert.alert('Error', 'User profile not found. Please log in.');
       return;
@@ -131,20 +127,20 @@ export const PreorderPolicyScreen: React.FC<PreorderPolicyScreenProps> = ({ navi
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.topNav}>
         <TouchableOpacity onPress={handleDecline} style={styles.backButton}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ArrowLeft size={26} color={colors.textPrimary} />
         </TouchableOpacity>
         <Text style={styles.navTitle}>Preorder Policy & Terms</Text>
-        <View style={{ width: 32 }} />
+        <View style={{ width: 38 }} />
       </View>
 
       <ScrollView 
         style={styles.container} 
         contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={true}
+        showsVerticalScrollIndicator={false}
       >
         <View style={styles.headerBox}>
           <View style={styles.iconCircle}>
-            <ShieldCheck size={28} color={colors.primary} />
+            <ShieldCheck size={32} color={colors.primary} />
           </View>
           <Text style={styles.headerTitle}>Marwadi University Preorder Policy</Text>
           <Text style={styles.headerSubtitle}>
@@ -170,9 +166,9 @@ export const PreorderPolicyScreen: React.FC<PreorderPolicyScreenProps> = ({ navi
           activeOpacity={0.8}
         >
           {hasAgreed ? (
-            <CheckSquare size={22} color={colors.primary} />
+            <CheckSquare size={26} color={colors.primary} />
           ) : (
-            <Square size={22} color={colors.textSecondary} />
+            <Square size={26} color={colors.textSecondary} />
           )}
           <Text style={styles.agreementText}>
             I have read, understood and agree to the 6-point MU Canteen Preorder Policy.
@@ -180,7 +176,6 @@ export const PreorderPolicyScreen: React.FC<PreorderPolicyScreenProps> = ({ navi
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Docked Sticky Action Buttons */}
       <View style={styles.stickyActionContainer}>
         <TouchableOpacity 
           style={styles.declineButton} 
@@ -199,169 +194,10 @@ export const PreorderPolicyScreen: React.FC<PreorderPolicyScreenProps> = ({ navi
           {submitting ? (
             <ActivityIndicator color="#FFFFFF" size="small" />
           ) : (
-            <Text style={styles.acceptButtonText}>Accept & Place Order (₹{total})</Text>
+            <Text style={styles.acceptButtonText}>Accept & Pay (₹{total})</Text>
           )}
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  topNav: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    padding: 4,
-  },
-  navTitle: {
-    fontSize: 15,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundSoft,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    paddingBottom: 130, // Guaranteed clearance for docked buttons on smaller screens
-  },
-  headerBox: {
-    alignItems: 'center',
-    marginBottom: spacing.md,
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-  },
-  iconCircle: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: spacing.xs,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.primaryDark,
-    textAlign: 'center',
-  },
-  headerSubtitle: {
-    fontSize: 12,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: 4,
-    lineHeight: 16,
-  },
-  policyCard: {
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    padding: spacing.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: spacing.md,
-    ...shadows.sm,
-  },
-  pointRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  pointDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: colors.primary,
-    marginTop: 6,
-  },
-  pointTitle: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  pointDesc: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-    lineHeight: 15,
-  },
-  agreementRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginTop: spacing.md,
-    gap: spacing.sm,
-  },
-  agreementText: {
-    flex: 1,
-    fontSize: 12,
-    color: colors.textPrimary,
-    fontWeight: typography.fontWeights.medium,
-    lineHeight: 16,
-  },
-  stickyActionContainer: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    flexDirection: 'row',
-    gap: spacing.sm,
-    ...shadows.md,
-  },
-  declineButton: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.backgroundSoft,
-  },
-  declineButtonText: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textSecondary,
-  },
-  acceptButton: {
-    flex: 2,
-    paddingVertical: 12,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.accentOrange,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  disabledButton: {
-    opacity: 0.5,
-  },
-  acceptButtonText: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.heavy,
-    color: '#FFFFFF',
-  },
-});

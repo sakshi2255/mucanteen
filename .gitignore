@@ -4,9 +4,9 @@ node_modules/
 
 # Expo & Metro
 .expo/
-frontend/.expo/
+Frontend/.expo/
 dist/
-frontend/dist/
+Frontend/dist/
 web-build/
 .dist/
 .kotlin/
@@ -37,8 +37,8 @@ Thumbs.db
 !.env.example
 
 # Android & iOS generated outputs
-frontend/android/
-frontend/ios/
+Frontend/android/
+Frontend/ios/
 
 # Firebase / Functions build
 backend/functions/lib/

@@ -10,7 +10,7 @@
       "supportsTablet": true
     },
     "android": {
-      "package": "com.marwadiuniversity.mucanteen",
+      "package": "com.marwadiuniversity.mucanteen2",
       "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "backgroundColor": "#079FA7",
@@ -25,7 +25,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "9aac454c-182a-4475-9336-ce8791beb676"
+        "projectId": "b1f127cb-487c-40bf-b69c-e9dc5e055a94"
       }
     }
   }

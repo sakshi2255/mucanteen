@@ -3,7 +3,7 @@
 ```text
 MU-Canteen/
 │
-├── frontend/
+├── Frontend/
 │   ├── assets/                             # App icons, splash screens, & adaptive icons
 │   │   ├── icon.png
 │   │   ├── splash-icon.png

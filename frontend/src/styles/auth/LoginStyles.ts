@@ -1,0 +1,43 @@
+import { StyleSheet } from 'react-native';
+import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+
+export const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: colors.background },
+  scrollContent: { padding: spacing.xl, justifyContent: 'center', flexGrow: 1 },
+  brandContainer: { alignItems: 'center', marginBottom: spacing.xl },
+  logoBadge: { width: 68, height: 68, borderRadius: borderRadius.xl, backgroundColor: colors.primary, justifyContent: 'center', alignItems: 'center', ...shadows.md },
+  brandTitle: { fontSize: typography.fontSizes.xxl, fontWeight: typography.fontWeights.heavy, color: colors.primaryDark, marginTop: spacing.md, letterSpacing: 1 },
+  brandSubtitle: { fontSize: typography.fontSizes.sm, color: colors.textSecondary, fontWeight: typography.fontWeights.medium, marginTop: 2 },
+  reviewBadge: { fontSize: 9, fontWeight: '800', color: colors.primary, backgroundColor: colors.primaryLight, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, marginTop: 6, letterSpacing: 0.8 },
+  formCard: { backgroundColor: colors.surface, borderRadius: borderRadius.lg, padding: spacing.xl, borderWidth: 1, borderColor: colors.border, ...shadows.md },
+  formTitle: { fontSize: typography.fontSizes.lg, fontWeight: typography.fontWeights.bold, color: colors.textPrimary, marginBottom: spacing.lg },
+  inputContainer: { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border, borderRadius: borderRadius.md, paddingHorizontal: spacing.md, marginBottom: spacing.md, height: 48 },
+  inputIcon: { marginRight: spacing.sm },
+  input: { flex: 1, color: colors.textPrimary, fontSize: typography.fontSizes.sm },
+  signInButton: { backgroundColor: colors.primary, borderRadius: borderRadius.md, height: 48, justifyContent: 'center', alignItems: 'center', marginTop: spacing.sm, ...shadows.sm },
+  signInButtonText: { color: '#FFFFFF', fontWeight: typography.fontWeights.bold, fontSize: typography.fontSizes.base, letterSpacing: 0.5 },
+  registerLink: { marginTop: spacing.lg, alignItems: 'center' },
+  registerPrompt: { fontSize: typography.fontSizes.xs, color: colors.textSecondary },
+  registerHighlight: { color: colors.primary, fontWeight: typography.fontWeights.bold },
+  
+  demoCard: { marginTop: spacing.xl, backgroundColor: '#F0FDFA', borderWidth: 1, borderColor: '#99F6E4', borderRadius: borderRadius.lg, padding: spacing.md },
+  demoHeader: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  demoTitle: { fontSize: 11, fontWeight: '800', color: colors.primaryDark, letterSpacing: 0.5 },
+  demoDescription: { fontSize: 11, color: colors.textSecondary, marginVertical: 8 },
+  demoDropdownBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#CCFBF1', borderRadius: borderRadius.md, paddingHorizontal: 12, paddingVertical: 10 },
+  demoDropdownText: { fontSize: 13, fontWeight: '600', color: colors.primaryDark },
+  
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
+  menuContainer: { width: '85%', maxHeight: '80%', backgroundColor: '#FFFFFF', borderRadius: 16, padding: 16, elevation: 5 },
+  menuHeader: { fontSize: 16, fontWeight: '700', color: '#4B5563', marginBottom: 12 },
+  menuSubHeader: { fontSize: 12, color: '#6B7280', marginBottom: 8, fontWeight: '600' },
+  menuItem: { paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: '#F3F4F6' },
+  menuItemText: { fontSize: 15, color: '#111827', fontWeight: '600' },
+  menuItemSubText: { fontSize: 12, color: '#6B7280', marginTop: 2 },
+  backBtnRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  backBtnText: { fontSize: 14, color: '#079FA7', marginLeft: 8, fontWeight: '600' },
+  safeArea: { flex: 1, backgroundColor: colors.background },
+  cancelItem: { borderBottomWidth: 0, marginTop: 10 },
+  cancelText: { color: '#EF4444', textAlign: 'center' },
+  loaderMargin: { marginVertical: 20 },
+});

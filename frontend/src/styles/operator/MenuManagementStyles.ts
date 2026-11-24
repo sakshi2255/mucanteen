@@ -1,0 +1,292 @@
+import { StyleSheet } from 'react-native';
+import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+
+export const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  backBtn: {
+    padding: 4,
+  },
+  headerTitle: {
+    fontSize: 15,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.textPrimary,
+  },
+  addBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.primary,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: borderRadius.sm,
+    gap: 4,
+  },
+  addBtnText: {
+    color: '#FFFFFF',
+    fontWeight: typography.fontWeights.bold,
+    fontSize: 12,
+  },
+  infoBanner: {
+    backgroundColor: colors.primaryLight,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 8,
+  },
+  infoBannerText: {
+    fontSize: 11,
+    color: colors.primaryDark,
+    fontWeight: '500',
+  },
+  listContent: {
+    padding: spacing.md,
+    gap: spacing.sm,
+  },
+  emptyListText: {
+    textAlign: 'center',
+    marginTop: 20,
+    color: colors.textSecondary,
+  },
+  itemCard: {
+    backgroundColor: colors.surface,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    ...shadows.sm,
+  },
+  itemDetails: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  vegBadge: {
+    width: 14,
+    height: 14,
+    borderWidth: 1.5,
+    borderRadius: 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  vegBadgeGreen: {
+    borderColor: colors.accentGreen,
+  },
+  vegBadgeRed: {
+    borderColor: colors.accentRed,
+  },
+  vegDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  vegDotGreen: {
+    backgroundColor: colors.accentGreen,
+  },
+  vegDotRed: {
+    backgroundColor: colors.accentRed,
+  },
+  categoryDropdownBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: colors.backgroundSoft,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
+  },
+  categoryDropdownText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+    fontWeight: '600',
+  },
+  categoryListBox: {
+    marginTop: 6,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.surface,
+    maxHeight: 160,
+  },
+  categoryOption: {
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.borderLight,
+  },
+  categoryOptionActive: {
+    backgroundColor: colors.primaryLight,
+  },
+  categoryOptionText: {
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  categoryOptionTextActive: {
+    color: colors.primaryDark,
+    fontWeight: '700',
+  },
+  addNewCatRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 8,
+  },
+  addNewCatInput: {
+    flex: 1,
+    backgroundColor: colors.backgroundSoft,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  addNewCatBtn: {
+    backgroundColor: colors.primaryDark,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: borderRadius.sm,
+  },
+  addNewCatBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  itemName: {
+    fontSize: 14,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.textPrimary,
+  },
+  itemDesc: {
+    fontSize: 11,
+    color: colors.textSecondary,
+    marginVertical: 2,
+  },
+  itemPrice: {
+    fontSize: 13,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.primaryDark,
+  },
+  cardActionsRow: {
+    flexDirection: 'row',
+    gap: spacing.md,
+    marginTop: 6,
+  },
+  actionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  actionBtnText: {
+    fontSize: 11,
+    color: colors.primary,
+    fontWeight: typography.fontWeights.semibold,
+  },
+  actionBtnTextDestructive: {
+    fontSize: 11,
+    color: colors.accentRed,
+    fontWeight: typography.fontWeights.semibold,
+  },
+  toggleSection: {
+    alignItems: 'center',
+  },
+  statusText: {
+    fontSize: 9,
+    fontWeight: typography.fontWeights.heavy,
+    marginBottom: 4,
+  },
+  availableText: {
+    color: colors.accentGreen,
+  },
+  soldOutText: {
+    color: colors.accentRed,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    padding: spacing.lg,
+  },
+  modalScrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  modalContainer: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.lg,
+    padding: spacing.lg,
+    ...shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+  modalTitle: {
+    fontSize: 16,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.textPrimary,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: colors.textSecondary,
+    marginTop: spacing.xs,
+    marginBottom: 4,
+  },
+  modalInput: {
+    backgroundColor: colors.backgroundSoft,
+    borderWidth: 1,
+    borderColor: colors.borderLight,
+    borderRadius: borderRadius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 8,
+    fontSize: 13,
+    color: colors.textPrimary,
+  },
+  vegSwitchRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginVertical: spacing.md,
+  },
+  vegSwitchLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: colors.textPrimary,
+  },
+  saveBtn: {
+    backgroundColor: colors.primary,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderRadius: borderRadius.md,
+    gap: 6,
+    marginTop: spacing.xs,
+  },
+  saveBtnText: {
+    color: '#FFFFFF',
+    fontWeight: typography.fontWeights.bold,
+    fontSize: 13,
+  },
+});

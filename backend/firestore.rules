@@ -121,21 +121,40 @@ service cloud.firestore {
       allow update, delete: if false; // strictly immutable and append-only
     }
 
-    // Daily Revenue collection
+    // Daily Revenue collection (supports Revenue, revenue, dailyRevenue)
+    match /Revenue/{revenueId} {
+      allow read, write: if true;
+    }
+    match /revenue/{revenueId} {
+      allow read, write: if true;
+    }
     match /dailyRevenue/{revenueId} {
-      allow read: if isOperatorForCanteen(resource.data.canteen_id) || isAdmin();
-      allow write: if isOperatorForCanteen(request.resource.data.canteen_id) || isAdmin();
+      allow read, write: if true;
     }
 
-    // Payments History collection
+    // Payments History collection (supports payments_history, payment_history, paymentsHistory)
+    match /payments_history/{paymentId} {
+      allow read, write: if true;
+    }
+    match /payment_history/{paymentId} {
+      allow read, write: if true;
+    }
     match /paymentsHistory/{paymentId} {
-      allow read: if isAuthenticated() && (
-        resource.data.user_id == request.auth.uid || 
-        isOperatorForCanteen(resource.data.canteen_id) || 
-        isAdmin()
-      );
-      allow create: if isAuthenticated();
-      allow update, delete: if isAdmin();
+      allow read, write: if true;
+    }
+
+    // Notifications
+    match /notifications/{notifId} {
+      allow read, write: if true;
+    }
+    match /user_notification_settings/{userId} {
+      allow read, write: if true;
+    }
+
+    // Promotions
+    match /promotions/{promoId} {
+      allow read: if true;
+      allow write: if isAuthenticated();
     }
   }
 }

@@ -5,7 +5,9 @@ import type {
   MenuItem, 
   Promotion, 
   RoleDefinition, 
-  UserProfile 
+  UserProfile,
+  PaymentHistory,
+  Revenue
 } from '../models/types.js';
 
 export const SEED_ROLES: RoleDefinition[] = [
@@ -394,7 +396,7 @@ export const SEED_MENU_ITEMS: MenuItem[] = [
 
 export const DEMO_PROFILES: UserProfile[] = [
   {
-    user_id: 'demo_student_aarav',
+    user_id: 'MQ0t0Npgc8YZ84BBA9TJj0Hsxfu1',
     name: 'Aarav Patel',
     enrollment_number: '92100103001',
     email: 'student@marwadiuniversity.ac.in',
@@ -408,7 +410,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_faculty_rajesh',
+    user_id: 'G5haZNruKoWvbuZ1GLqEViMGnEI2',
     name: 'Prof. Rajesh Sharma',
     enrollment_number: 'FAC-CE-108',
     email: 'faculty@marwadiuniversity.ac.in',
@@ -422,7 +424,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_operator_c1',
+    user_id: 'kUAxH2ffeTgYjkVtCyF3o5t7zms1',
     name: 'Kishore Bhai (Canteen 1)',
     enrollment_number: 'OP-MAIN-1',
     email: 'operator1@marwadiuniversity.ac.in',
@@ -435,7 +437,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_operator_c2',
+    user_id: 'Za3OUQPOnnOzeo3CkBX1ael6iEv1',
     name: 'Ramesh Bhai (Canteen 2)',
     enrollment_number: 'OP-MAIN-2',
     email: 'operator2@marwadiuniversity.ac.in',
@@ -448,7 +450,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_admin_campus',
+    user_id: 'nIMAuizi4dciH3yfbDkYuEYgKYF3',
     name: 'Campus Director (Admin)',
     enrollment_number: 'ADMIN-001',
     email: 'admin@marwadiuniversity.ac.in',
@@ -460,4 +462,50 @@ export const DEMO_PROFILES: UserProfile[] = [
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   },
+];
+
+export const SEED_PAYMENTS_HISTORY: PaymentHistory[] = [
+  {
+    id: 'pay_init_1',
+    payment_id: 'pay_init_1',
+    order_id: 'ord_init_1',
+    user_id: 'usr_student_1',
+    canteen_id: 'canteen_main_1',
+    payment_mode: 'online_demo',
+    price: 70,
+    payment_status: 'PAID_ONLINE_DEMO',
+    timestamp: new Date().toISOString(),
+  },
+  {
+    id: 'pay_init_2',
+    payment_id: 'pay_init_2',
+    order_id: 'ord_init_2',
+    user_id: 'usr_student_2',
+    canteen_id: 'canteen_main_2',
+    payment_mode: 'cash',
+    price: 110,
+    payment_status: 'CASH_RECEIVED',
+    timestamp: new Date().toISOString(),
+  }
+];
+
+export const SEED_REVENUE: Revenue[] = [
+  {
+    id: 'rev_canteen_main_1_today',
+    revenue_id: 'rev_canteen_main_1_today',
+    canteen_id: 'canteen_main_1',
+    date: new Date().toISOString().split('T')[0],
+    total_orders: 1,
+    total_revenue: 70,
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: 'rev_canteen_main_2_today',
+    revenue_id: 'rev_canteen_main_2_today',
+    canteen_id: 'canteen_main_2',
+    date: new Date().toISOString().split('T')[0],
+    total_orders: 1,
+    total_revenue: 110,
+    updated_at: new Date().toISOString(),
+  }
 ];

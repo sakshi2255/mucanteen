@@ -1,39 +1,18 @@
-import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  ActivityIndicator, 
-  Alert, 
-  SafeAreaView 
-} from 'react-native';
-import { 
-  ArrowLeft, 
-  Trash2, 
-  Plus, 
-  Minus, 
-  Clock, 
-  Zap, 
-  ShieldAlert, 
-  ShoppingBag, 
-  Check,
-  CreditCard,
-  Banknote,
-  Calendar
+import React, { useState, useEffect } from 'react';
+import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import {
+  ArrowLeft, Trash2, Plus, Minus, Clock, Zap, ShoppingBag, Check, CreditCard, Banknote, Calendar,
 } from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+import { colors } from '../../config/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { createOrderInFirestore } from '../../services/firestoreService';
+import { createOrderInFirestore, listenCanteens } from '../../services/firestoreService';
 import { getISTDateString } from '../../services/tokenService';
-import { INITIAL_CANTEENS } from '../../services/seedData';
-import type { OrderType, Canteen, PaymentMethod } from '../../models/types';
+import { styles } from '../../styles/student/CartStyles';
+import type { Canteen } from '../../models/types';
 
-interface CartScreenProps {
-  navigation: any;
-}
+interface CartScreenProps { navigation: any; }
 
 const PREORDER_SLOTS = [
   '10:30 AM (Morning Recess)',
@@ -42,48 +21,69 @@ const PREORDER_SLOTS = [
   '04:30 PM (Evening Tea)',
 ];
 
+function parseScheduledIsoForToday(timeStr: string): string | null {
+  const match = timeStr.match(/(\d{1,2}):(\d{2})\s*(AM|PM)?/i);
+  if (!match) return null;
+  let hours = parseInt(match[1], 10);
+  const minutes = parseInt(match[2], 10);
+  const meridiem = match[3]?.toUpperCase();
+  if (meridiem === 'PM' && hours < 12) hours += 12;
+  if (meridiem === 'AM' && hours === 12) hours = 0;
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+
+  const target = new Date();
+  target.setHours(hours, minutes, 0, 0);
+  return target.toISOString();
+}
+
 export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const { 
-    items, 
-    activeCanteenId, 
-    activeCanteenName, 
-    subtotal, 
-    total, 
-    orderType, 
-    setOrderType,
-    pickupTime, 
-    setPickupTime,
-    paymentMethod,
-    setPaymentMethod,
-    policyAccepted,
-    addToCart, 
-    removeFromCart, 
-    clearCart 
+  const {
+    items, activeCanteenId, activeCanteenName, subtotal, total,
+    orderType, setOrderType, pickupTime, setPickupTime,
+    paymentMethod, setPaymentMethod, policyAccepted,
+    addToCart, removeFromCart, clearCart,
   } = useCart();
 
+  const [canteens, setCanteens] = useState<Canteen[]>([]);
+  const [useCustomTime, setUseCustomTime] = useState(false);
+  const [customTimeInput, setCustomTimeInput] = useState('');
   const [loading, setLoading] = useState(false);
   const todayIST = getISTDateString();
 
-  const activeCanteen = INITIAL_CANTEENS.find(
-    (c) => c.canteen_id === activeCanteenId
-  ) || INITIAL_CANTEENS[0];
+  useEffect(() => {
+    const unsub = listenCanteens((list) => setCanteens(list));
+    return unsub;
+  }, []);
+
+  const activeCanteen = canteens.find((c) => c.canteen_id === activeCanteenId) || canteens[0];
 
   const handleProceed = async () => {
-    if (items.length === 0) {
-      Alert.alert('Empty Cart', 'Please add items to your cart.');
-      return;
-    }
-
+    if (items.length === 0 || !activeCanteen) return;
     if (!user) {
       Alert.alert('Authentication Required', 'Please sign in to place an order.');
       return;
     }
-
-    // If Preorder, must accept preorder policy first
     if (orderType === 'preorder' && !policyAccepted) {
       navigation.navigate('PreorderPolicy');
       return;
+    }
+
+    const effectivePickupTime = orderType === 'preorder'
+      ? (useCustomTime ? customTimeInput.trim() : pickupTime)
+      : 'Immediate';
+
+    let scheduledReleaseAt: string | null = null;
+    if (orderType === 'preorder') {
+      scheduledReleaseAt = parseScheduledIsoForToday(effectivePickupTime);
+      if (!scheduledReleaseAt) {
+        Alert.alert('Invalid Time', 'Please enter a valid time such as "01:30 PM" or "13:30".');
+        return;
+      }
+      if (new Date(scheduledReleaseAt).getTime() <= Date.now()) {
+        Alert.alert('Past Time Selected', 'Please select a future time for your pre-order.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -105,10 +105,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         subtotal,
         total,
         order_type: orderType,
-        pickup_time: orderType === 'preorder' ? pickupTime : 'Immediate',
+        pickup_time: effectivePickupTime,
+        scheduled_release_at: scheduledReleaseAt,
         payment_method: paymentMethod,
         policy_version: '1.0.0',
-        policy_accepted: orderType === 'preorder' ? true : false,
+        policy_accepted: orderType === 'preorder',
       });
 
       clearCart();
@@ -122,235 +123,206 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      {/* Top Header */}
       <View style={styles.topHeader}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ArrowLeft size={26} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>My Canteen Cart</Text>
-        {items.length > 0 && (
+        <Text style={styles.headerTitle}>Cart Summary</Text>
+        {items.length > 0 ? (
           <TouchableOpacity onPress={clearCart} style={styles.clearBtn}>
-            <Text style={styles.clearBtnText}>Clear</Text>
+            <Text style={styles.clearBtnText}>CLEAR</Text>
           </TouchableOpacity>
+        ) : (
+          <View style={styles.headerSpacer} />
         )}
       </View>
 
       {items.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <ShoppingBag size={54} color={colors.textMuted} />
+          <ShoppingBag size={80} color={colors.borderLight} />
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>
-            Browse our campus canteens and add delicious snacks & meals!
-          </Text>
-          <TouchableOpacity 
-            style={styles.browseButton}
-            onPress={() => navigation.navigate('StudentHome')}
-          >
-            <Text style={styles.browseButtonText}>Browse Food</Text>
+          <Text style={styles.emptySubtitle}>Good food is always cooking! Go ahead and order some delicious items.</Text>
+          <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('StudentHome')}>
+            <Text style={styles.browseButtonText}>Browse Canteens</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView 
-          style={styles.container} 
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {/* Canteen Banner */}
-          <View style={styles.canteenBanner}>
-            <Text style={styles.canteenBannerTitle}>{activeCanteenName || activeCanteen.name}</Text>
-            <Text style={styles.canteenBannerSubtitle}>
-              Floor {activeCanteen.floor === 0 ? 'Ground' : activeCanteen.floor} • Token Prefix [{activeCanteen.token_prefix || 'A'}] • Pickup Only
-            </Text>
+        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+          {activeCanteen && (
+            <View style={styles.canteenBanner}>
+              <Text style={styles.canteenBannerTitle}>{activeCanteenName || activeCanteen.name}</Text>
+              <Text style={styles.canteenBannerSubtitle}>
+                Floor {activeCanteen.floor === 0 ? 'Ground' : activeCanteen.floor} • Token Prefix [{activeCanteen.token_prefix || 'A'}]
+              </Text>
+            </View>
+          )}
+
+          <View style={styles.itemsCard}>
+            {items.map(({ item, quantity }) => (
+              <View key={item.menu_item_id} style={styles.cartItemRow}>
+                <View style={styles.itemInfo}>
+                  <View style={[styles.vegIndicatorDot, item.is_veg ? styles.vegDotGreen : styles.vegDotRed]} />
+                  <View>
+                    <Text style={styles.itemName}>{item.item_name}</Text>
+                    <Text style={styles.itemPrice}>₹{item.price}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.stepperSubtotalGroup}>
+                  <View style={styles.stepper}>
+                    <TouchableOpacity onPress={() => removeFromCart(item)} style={styles.stepBtn}>
+                      {quantity === 1 ? <Trash2 size={15} color={colors.accentRed} /> : <Minus size={15} color={colors.primaryDark} />}
+                    </TouchableOpacity>
+                    <Text style={styles.stepQty}>{quantity}</Text>
+                    <TouchableOpacity onPress={() => addToCart(item)} style={styles.stepBtn}>
+                      <Plus size={15} color={colors.primaryDark} />
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.itemSubtotal}>₹{item.price * quantity}</Text>
+                </View>
+              </View>
+            ))}
           </View>
 
-          {/* Order Type Toggle: Instant vs Preorder */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeading}>Select Ordering Mode</Text>
+            <Text style={styles.sectionHeading}>Ordering Mode</Text>
             <View style={styles.typeToggleRow}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.typeButton, orderType === 'instant' && styles.activeTypeButton]}
                 onPress={() => setOrderType('instant')}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
               >
-                <Zap size={15} color={orderType === 'instant' ? '#FFFFFF' : colors.primaryDark} />
-                <Text style={[styles.typeButtonText, orderType === 'instant' && styles.activeTypeButtonText]}>
-                  Instant Order
-                </Text>
+                <Zap size={18} color={orderType === 'instant' ? '#FFFFFF' : colors.textSecondary} />
+                <Text style={[styles.typeButtonText, orderType === 'instant' && styles.activeTypeButtonText]}>Instant</Text>
               </TouchableOpacity>
-
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={[styles.typeButton, orderType === 'preorder' && styles.activeTypeButton]}
                 onPress={() => setOrderType('preorder')}
-                activeOpacity={0.8}
+                activeOpacity={0.9}
               >
-                <Clock size={15} color={orderType === 'preorder' ? '#FFFFFF' : colors.primaryDark} />
-                <Text style={[styles.typeButtonText, orderType === 'preorder' && styles.activeTypeButtonText]}>
-                  Preorder for Break
-                </Text>
+                <Clock size={18} color={orderType === 'preorder' ? '#FFFFFF' : colors.textSecondary} />
+                <Text style={[styles.typeButtonText, orderType === 'preorder' && styles.activeTypeButtonText]}>Preorder</Text>
               </TouchableOpacity>
             </View>
 
-            {/* Same-Day Preorder Time Slot Selection */}
             {orderType === 'preorder' && (
               <View style={styles.slotsContainer}>
                 <View style={styles.sameDayNotice}>
-                  <Calendar size={13} color={colors.primary} />
-                  <Text style={styles.sameDayText}>Same-Day Preorder: Today ({todayIST})</Text>
+                  <Calendar size={14} color={colors.primaryDark} />
+                  <Text style={styles.sameDayText}>Scheduling for Today ({todayIST})</Text>
                 </View>
-
-                <Text style={styles.slotHeading}>Select Campus Break Slot:</Text>
+                <Text style={styles.slotHeading}>Select Break Slot or Custom Time:</Text>
                 {PREORDER_SLOTS.map((slot) => {
-                  const isSelected = pickupTime === slot;
+                  const isSelected = !useCustomTime && pickupTime === slot;
                   return (
                     <TouchableOpacity
                       key={slot}
                       style={[styles.slotItem, isSelected && styles.activeSlotItem]}
-                      onPress={() => setPickupTime(slot)}
+                      onPress={() => {
+                        setUseCustomTime(false);
+                        setPickupTime(slot);
+                      }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.slotText, isSelected && styles.activeSlotText]}>
-                        {slot}
-                      </Text>
-                      {isSelected && <Check size={16} color={colors.primary} />}
+                      <Text style={[styles.slotText, isSelected && styles.activeSlotText]}>{slot}</Text>
+                      {isSelected && <Check size={18} color={colors.primary} />}
                     </TouchableOpacity>
                   );
                 })}
 
-                {!policyAccepted && (
-                  <View style={styles.policyNotice}>
-                    <ShieldAlert size={14} color="#B45309" />
-                    <Text style={styles.policyNoticeText}>
-                      Preorders require acknowledging the 6-point campus preorder policy.
+                <TouchableOpacity
+                  style={[styles.slotItem, useCustomTime && styles.activeSlotItem]}
+                  onPress={() => setUseCustomTime(true)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={[styles.slotText, useCustomTime && styles.activeSlotText]}>Custom Time</Text>
+                  {useCustomTime && <Check size={18} color={colors.primary} />}
+                </TouchableOpacity>
+
+                {useCustomTime && (
+                  <>
+                    <TextInput
+                      style={styles.customTimeInput}
+                      placeholder="Enter time (e.g. 01:30 PM or 13:30)"
+                      placeholderTextColor={colors.textMuted}
+                      value={customTimeInput}
+                      onChangeText={setCustomTimeInput}
+                    />
+                    <Text style={styles.customTimeHint}>
+                      Your order will remain Scheduled and automatically release to the canteen at this exact time.
                     </Text>
-                  </View>
+                  </>
                 )}
               </View>
             )}
           </View>
 
-          {/* Payment Method Selector */}
           <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeading}>Payment Mode</Text>
-            
-            {/* Online Demo */}
+            <Text style={styles.sectionHeading}>Payment Method</Text>
             <TouchableOpacity
               style={[styles.paymentCard, paymentMethod === 'online_demo' && styles.activePaymentCard]}
               onPress={() => setPaymentMethod('online_demo')}
-              activeOpacity={0.8}
             >
-              <View style={styles.paymentLeft}>
-                <CreditCard size={18} color={paymentMethod === 'online_demo' ? colors.primary : colors.textSecondary} />
-                <View>
-                  <Text style={[styles.paymentTitle, paymentMethod === 'online_demo' && styles.activePaymentTitle]}>
-                    Online (Demo Checkout)
-                  </Text>
-                  <Text style={styles.paymentSub}>Instant simulated confirmation (Review 1)</Text>
-                </View>
+              <CreditCard size={22} color={paymentMethod === 'online_demo' ? colors.primary : colors.textSecondary} />
+              <View style={styles.paymentTextCol}>
+                <Text style={[styles.paymentTitle, paymentMethod === 'online_demo' && styles.activePaymentTitle]}>Online Payment</Text>
+                <Text style={styles.paymentSub}>Campus UPI & card payment</Text>
               </View>
-              {paymentMethod === 'online_demo' && <Check size={16} color={colors.primary} />}
+              {paymentMethod === 'online_demo' && <Check size={20} color={colors.primary} />}
             </TouchableOpacity>
 
-            {/* Cash at Counter */}
             <TouchableOpacity
               style={[styles.paymentCard, paymentMethod === 'cash' && styles.activePaymentCard]}
               onPress={() => setPaymentMethod('cash')}
-              activeOpacity={0.8}
             >
-              <View style={styles.paymentLeft}>
-                <Banknote size={18} color={paymentMethod === 'cash' ? '#D97706' : colors.textSecondary} />
-                <View>
-                  <Text style={[styles.paymentTitle, paymentMethod === 'cash' && styles.activePaymentTitle]}>
-                    Cash at Canteen Counter
-                  </Text>
-                  <Text style={styles.paymentSub}>Pay physical cash upon collection</Text>
-                </View>
+              <Banknote size={22} color={paymentMethod === 'cash' ? '#D97706' : colors.textSecondary} />
+              <View style={styles.paymentTextCol}>
+                <Text style={[styles.paymentTitle, paymentMethod === 'cash' && styles.activePaymentTitle]}>Pay with Cash</Text>
+                <Text style={styles.paymentSub}>Pay at the canteen counter</Text>
               </View>
-              {paymentMethod === 'cash' && <Check size={16} color={colors.primary} />}
+              {paymentMethod === 'cash' && <Check size={20} color={colors.primary} />}
             </TouchableOpacity>
           </View>
 
-          {/* Selected Items List */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeading}>Your Selected Items ({items.length})</Text>
-            {items.map(({ item, quantity }) => (
-              <View key={item.menu_item_id} style={styles.cartItemRow}>
-                <View style={styles.itemInfo}>
-                  <View style={styles.vegIndicatorRow}>
-                    <View style={[styles.vegIndicatorDot, { backgroundColor: item.is_veg ? colors.accentGreen : colors.accentRed }]} />
-                    <Text style={styles.itemName}>{item.item_name}</Text>
-                  </View>
-                  <Text style={styles.itemPrice}>₹{item.price} each</Text>
-                </View>
-
-                {/* Stepper Buttons */}
-                <View style={styles.stepper}>
-                  <TouchableOpacity 
-                    onPress={() => removeFromCart(item)}
-                    style={styles.stepBtn}
-                    activeOpacity={0.7}
-                  >
-                    {quantity === 1 ? (
-                      <Trash2 size={13} color={colors.accentRed} />
-                    ) : (
-                      <Minus size={13} color={colors.primaryDark} />
-                    )}
-                  </TouchableOpacity>
-                  <Text style={styles.stepQty}>{quantity}</Text>
-                  <TouchableOpacity 
-                    onPress={() => addToCart(item)}
-                    style={styles.stepBtn}
-                    activeOpacity={0.7}
-                  >
-                    <Plus size={13} color={colors.primaryDark} />
-                  </TouchableOpacity>
-                </View>
-
-                <Text style={styles.itemSubtotal}>₹{item.price * quantity}</Text>
-              </View>
-            ))}
-          </View>
-
-          {/* Bill Summary */}
-          <View style={styles.sectionCard}>
-            <Text style={styles.sectionHeading}>Bill Breakdown</Text>
+          <View style={styles.billCard}>
+            <Text style={styles.sectionHeading}>Bill Details</Text>
             <View style={styles.billRow}>
               <Text style={styles.billLabel}>Item Total</Text>
               <Text style={styles.billValue}>₹{subtotal}</Text>
             </View>
             <View style={styles.billRow}>
-              <Text style={styles.billLabel}>Campus Convenience Fee</Text>
-              <Text style={[styles.billValue, { color: colors.accentGreen }]}>FREE</Text>
+              <Text style={styles.billLabel}>Platform Fee</Text>
+              <Text style={[styles.billValue, styles.freeValue]}>FREE</Text>
             </View>
-            <View style={[styles.billRow, styles.totalRow]}>
-              <Text style={styles.totalLabel}>To Pay</Text>
+            <View style={styles.billDivider} />
+            <View style={styles.totalRow}>
+              <Text style={styles.totalLabel}>TO PAY</Text>
               <Text style={styles.totalValue}>₹{total}</Text>
             </View>
           </View>
         </ScrollView>
       )}
 
-      {/* Sticky Bottom Action */}
       {items.length > 0 && (
-        <View style={styles.bottomBar}>
-          <View>
-            <Text style={styles.bottomTotalLabel}>Total Amount</Text>
-            <Text style={styles.bottomTotal}>₹{total}</Text>
-          </View>
-
+        <View style={styles.bottomCheckoutBar}>
           <TouchableOpacity
             style={[styles.checkoutBtn, loading && styles.disabledBtn]}
             onPress={handleProceed}
             disabled={loading}
-            activeOpacity={0.85}
+            activeOpacity={0.9}
           >
             {loading ? (
               <ActivityIndicator color="#FFFFFF" size="small" />
-            ) : orderType === 'preorder' && !policyAccepted ? (
-              <Text style={styles.checkoutBtnText}>Review Policy & Confirm</Text>
             ) : (
-              <Text style={styles.checkoutBtnText}>
-                {paymentMethod === 'cash' ? 'Place Order (Cash)' : 'Pay & Place Order'}
-              </Text>
+              <>
+                <View>
+                  <Text style={styles.btnTotalLabel}>₹{total}</Text>
+                  <Text style={styles.btnTotalSub}>TOTAL</Text>
+                </View>
+                <Text style={styles.checkoutBtnText}>
+                  {orderType === 'preorder' && !policyAccepted ? 'REVIEW POLICY  >' : 'PLACE ORDER  >'}
+                </Text>
+              </>
             )}
           </TouchableOpacity>
         </View>
@@ -358,356 +330,3 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  topHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm + 2,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-    backgroundColor: colors.surface,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: 16,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  clearBtn: {
-    padding: 4,
-  },
-  clearBtnText: {
-    fontSize: 12,
-    color: colors.accentRed,
-    fontWeight: typography.fontWeights.bold,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.backgroundSoft,
-  },
-  scrollContent: {
-    padding: spacing.md,
-    paddingBottom: 110,
-    gap: spacing.md,
-  },
-  emptyContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: spacing.xl,
-  },
-  emptyTitle: {
-    fontSize: 18,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-    marginTop: spacing.md,
-  },
-  emptySubtitle: {
-    fontSize: 13,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginTop: spacing.xs,
-    marginBottom: spacing.lg,
-  },
-  browseButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: borderRadius.md,
-  },
-  browseButtonText: {
-    color: '#FFFFFF',
-    fontWeight: typography.fontWeights.bold,
-    fontSize: 14,
-  },
-  canteenBanner: {
-    backgroundColor: colors.primaryLight,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderLeftWidth: 4,
-    borderLeftColor: colors.primary,
-  },
-  canteenBannerTitle: {
-    fontSize: 15,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.primaryDark,
-  },
-  canteenBannerSubtitle: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  sectionCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    ...shadows.sm,
-  },
-  sectionHeading: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  typeToggleRow: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-  },
-  typeButton: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 10,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.backgroundSoft,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    gap: 6,
-  },
-  activeTypeButton: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary,
-  },
-  typeButtonText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: colors.textSecondary,
-  },
-  activeTypeButtonText: {
-    color: '#FFFFFF',
-  },
-  slotsContainer: {
-    marginTop: spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: spacing.sm,
-  },
-  sameDayNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.primaryLight,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: borderRadius.sm,
-    marginBottom: spacing.xs,
-    gap: 6,
-  },
-  sameDayText: {
-    fontSize: 11,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.primaryDark,
-  },
-  slotHeading: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    marginBottom: spacing.xs,
-  },
-  slotItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: spacing.sm,
-    borderRadius: borderRadius.sm,
-    marginBottom: 4,
-    backgroundColor: colors.backgroundSoft,
-  },
-  activeSlotItem: {
-    backgroundColor: colors.primaryLight,
-    borderWidth: 1,
-    borderColor: colors.primary,
-  },
-  slotText: {
-    fontSize: 12,
-    color: colors.textPrimary,
-  },
-  activeSlotText: {
-    color: colors.primaryDark,
-    fontWeight: '700',
-  },
-  policyNotice: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    padding: spacing.xs,
-    borderRadius: borderRadius.sm,
-    marginTop: spacing.xs,
-    gap: 6,
-  },
-  policyNoticeText: {
-    fontSize: 10,
-    color: '#92400E',
-    flex: 1,
-  },
-  paymentCard: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: spacing.sm,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginBottom: spacing.xs,
-    backgroundColor: colors.backgroundSoft,
-  },
-  activePaymentCard: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
-  },
-  paymentLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  paymentTitle: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  activePaymentTitle: {
-    color: colors.primaryDark,
-  },
-  paymentSub: {
-    fontSize: 10,
-    color: colors.textSecondary,
-    marginTop: 1,
-  },
-  cartItemRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: spacing.sm,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  itemInfo: {
-    flex: 1,
-  },
-  vegIndicatorRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  vegIndicatorDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  itemName: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  itemPrice: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  stepper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.backgroundSoft,
-    borderRadius: borderRadius.sm,
-    borderWidth: 1,
-    borderColor: colors.borderLight,
-    marginHorizontal: spacing.sm,
-  },
-  stepBtn: {
-    padding: 6,
-  },
-  stepQty: {
-    paddingHorizontal: 8,
-    fontSize: 12,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.primaryDark,
-  },
-  itemSubtotal: {
-    fontSize: 13,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-    minWidth: 45,
-    textAlign: 'right',
-  },
-  billRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6,
-  },
-  billLabel: {
-    fontSize: 12,
-    color: colors.textSecondary,
-  },
-  billValue: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: colors.textPrimary,
-  },
-  totalRow: {
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    paddingTop: 8,
-    marginTop: 4,
-  },
-  totalLabel: {
-    fontSize: 14,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  totalValue: {
-    fontSize: 16,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.primaryDark,
-  },
-  bottomBar: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: colors.surface,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: colors.borderLight,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    ...shadows.md,
-  },
-  bottomTotalLabel: {
-    fontSize: 10,
-    color: colors.textSecondary,
-  },
-  bottomTotal: {
-    fontSize: 18,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.primaryDark,
-  },
-  checkoutBtn: {
-    backgroundColor: colors.accentOrange,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: 12,
-    borderRadius: borderRadius.md,
-    minWidth: 180,
-    alignItems: 'center',
-  },
-  disabledBtn: {
-    opacity: 0.6,
-  },
-  checkoutBtnText: {
-    color: '#FFFFFF',
-    fontWeight: typography.fontWeights.heavy,
-    fontSize: 13,
-  },
-});

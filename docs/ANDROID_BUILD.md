@@ -1,7 +1,7 @@
 # Android Build & Compilation Guide
 
 **Project:** MU Canteen  
-**Application ID:** `com.marwadiuniversity.mucanteen`  
+**Application ID:** `com.marwadiuniversity.mucanteen2`  
 **Framework:** Expo SDK 58 / React Native 0.88.1 (Hermes Engine)
 
 ---
@@ -11,7 +11,7 @@
 The project codebase has been validated using the Expo Android production export pipeline:
 
 ```bash
-cd frontend
+cd Frontend
 npx expo export --platform android
 ```
 
@@ -37,7 +37,7 @@ eas login
 ```
 
 ### Step 2.3: Initialize EAS Configuration (if not present)
-Create `frontend/eas.json`:
+Create `Frontend/eas.json`:
 ```json
 {
   "cli": {
@@ -65,7 +65,7 @@ Create `frontend/eas.json`:
 
 ### Step 2.4: Trigger Standalone APK Build
 ```bash
-cd frontend
+cd Frontend
 eas build -p android --profile preview
 ```
 
@@ -77,7 +77,7 @@ Upon completion, EAS provides a direct download link and QR code to install the 
 
 For instant live preview on an Android device:
 ```bash
-cd frontend
+cd Frontend
 npx expo start
 ```
 Scan the displayed QR code using the **Expo Go** application on any Android device connected to the same local network.

@@ -2,7 +2,7 @@
 
 ## 1. Overview
 
-The MU Canteen codebase features automated testing across frontend models and backend business logic, combined with TypeScript static verification and Android Hermes bytecode compilation.
+The MU Canteen codebase features automated testing across Frontend models and backend business logic, combined with TypeScript static verification and Android Hermes bytecode compilation.
 
 ---
 

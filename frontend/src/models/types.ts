@@ -29,7 +29,7 @@ export interface Canteen {
   name: string;
   building_id: string;
   floor: number;
-  token_prefix: string; // e.g. 'A', 'B', 'C'
+  token_prefix: string;
   canteen_type: CanteenType;
   operator_ids: string[];
   email: string;
@@ -65,6 +65,7 @@ export interface MenuItem {
   image_url: string | null;
   is_available: boolean;
   is_active: boolean;
+  ingredients?: string;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +87,7 @@ export type PaymentMethod = 'online_demo' | 'cash';
 export type PaymentStatus = 'PAID_ONLINE_DEMO' | 'CASH_PENDING' | 'CASH_RECEIVED';
 
 export type OrderStatus = 
+  | 'scheduled'           // pre-order waiting for scheduled release timestamp
   | 'awaiting_acceptance' // student sees "In Queue"
   | 'preparing'           // student sees "Preparing"
   | 'ready_for_pickup'    // student sees "Ready for Pickup"
@@ -96,10 +98,10 @@ export type OrderStatus =
 
 export interface Order {
   order_id: string;
-  token_display: string;         // e.g. 'A1', 'B2', 'C3'
-  daily_token_number: number;    // 1, 2, 3...
-  token_prefix: string;          // 'A', 'B', 'C'
-  token_date: string;            // YYYY-MM-DD
+  token_display: string;
+  daily_token_number: number;
+  token_prefix: string;
+  token_date: string;
   canteen_id: string;
   canteen_name_snapshot: string;
   user_id: string;
@@ -112,18 +114,41 @@ export interface Order {
   payment_method: PaymentMethod;
   payment_status: PaymentStatus;
   order_status: OrderStatus;
-  pickup_time: string;           // 'Immediate' or custom e.g. '01:30 PM'
-  pickup_date: string;           // Same-day YYYY-MM-DD
+  pickup_time: string;
+  pickup_date: string;
+  scheduled_release_at?: string | null;
   policy_version: string;
   policy_accepted_at: string | null;
   ready_at: string | null;
-  collection_deadline: string | null; // ready_at + 12 minutes
+  collection_deadline: string | null;
   collected_time: string | null;
   collected_status: 'pending' | 'verified' | 'expired';
   cash_received_at: string | null;
   created_at: string;
   updated_at: string;
   idempotency_key: string;
+}
+
+export interface PaymentHistory {
+  payment_id: string;          // Primary Key
+  order_id: string;            // Foreign Key -> orders.order_id
+  user_id: string;             // Foreign Key -> users.user_id
+  canteen_id: string;          // Foreign Key -> canteens.canteen_id
+  user_name_snapshot?: string;
+  canteen_name_snapshot?: string;
+  payment_mode: PaymentMethod;
+  price: number;
+  payment_status: PaymentStatus;
+  timestamp: string;
+}
+
+export interface Revenue {
+  revenue_id: string;          // Primary Key (rev_{canteen_id}_{YYYY-MM-DD})
+  canteen_id: string;          // Foreign Key -> canteens.canteen_id
+  date: string;                // YYYY-MM-DD
+  total_orders: number;
+  total_revenue: number;
+  updated_at: string;
 }
 
 export interface Promotion {
@@ -156,4 +181,36 @@ export interface AuditLog {
   after_data: Record<string, unknown> | null;
   timestamp: string;
   source: 'client' | 'function' | 'system';
+}
+
+export interface OrderCounter {
+  canteen_id: string;
+  token_prefix: string;
+  token_date: string;
+  last_token_number: number;
+  lifetime_order_count: number;
+  updated_at: string;
+}
+
+export interface AppNotification {
+  notification_id: string;
+  user_id: string;
+  order_id: string;
+  title: string;
+  body: string;
+  type: 'order_placed' | 'order_accepted' | 'order_preparing' | 'order_ready' | 'pickup_warning' | 'pickup_failed' | 'order_declined' | 'order_cancelled';
+  is_read: boolean;
+  created_at: string;
+}
+
+export interface NotificationSettings {
+  user_id: string;
+  order_placed: boolean;
+  order_accepted: boolean;
+  order_preparing: boolean;
+  order_ready: boolean;
+  pickup_warning: boolean;
+  pickup_failed: boolean;
+  order_declined: boolean;
+  [key: string]: boolean | string;
 }

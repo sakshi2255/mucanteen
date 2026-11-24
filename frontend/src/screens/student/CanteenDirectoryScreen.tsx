@@ -2,17 +2,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   ScrollView, 
   TextInput, 
-  TouchableOpacity,
-  SafeAreaView 
+  TouchableOpacity 
 } from 'react-native';
-import { Search, ArrowLeft, Building2 } from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius } from '../../config/theme';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Search, ArrowLeft, Store } from 'lucide-react-native';
+import { colors } from '../../config/theme';
 import { CanteenCard } from '../../components/common/CanteenCard';
 import { useAuth } from '../../context/AuthContext';
 import { listenCanteens } from '../../services/firestoreService';
+import { styles } from '../../styles/student/CanteenDirectoryStyles';
 import type { Canteen } from '../../models/types';
 
 interface CanteenDirectoryScreenProps {
@@ -38,8 +38,14 @@ export const CanteenDirectoryScreen: React.FC<CanteenDirectoryScreenProps> = ({ 
         if (!matches) return false;
       }
 
-      if (selectedBldg !== 'all' && c.building_id !== selectedBldg) {
-        return false;
+      if (selectedBldg === 'bldg-main' || selectedBldg === 'bldg_main') {
+        return c.building_id.includes('main');
+      }
+      if (selectedBldg === 'bldg-law' || selectedBldg === 'bldg_law') {
+        return c.building_id.includes('law');
+      }
+      if (selectedBldg === 'bldg-hostel' || selectedBldg === 'bldg_hostel') {
+        return c.building_id.includes('hostel');
       }
 
       return true;
@@ -51,10 +57,10 @@ export const CanteenDirectoryScreen: React.FC<CanteenDirectoryScreenProps> = ({ 
       {/* Top Bar */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
-          <ArrowLeft size={22} color={colors.textPrimary} />
+          <ArrowLeft size={26} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>Campus Canteen Directory</Text>
-        <View style={{ width: 22 }} />
+        <Text style={styles.headerTitle}>All Dining Halls</Text>
+        <View style={{ width: 26 }} />
       </View>
 
       <ScrollView 
@@ -64,10 +70,10 @@ export const CanteenDirectoryScreen: React.FC<CanteenDirectoryScreenProps> = ({ 
       >
         {/* Search */}
         <View style={styles.searchBar}>
-          <Search size={18} color={colors.textSecondary} style={{ marginRight: spacing.sm }} />
+          <Search size={22} color={colors.primary} style={{ marginRight: 12 }} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search canteens by floor, building or name..."
+            placeholder="Search canteens or locations..."
             placeholderTextColor={colors.textMuted}
             value={search}
             onChangeText={setSearch}
@@ -86,40 +92,41 @@ export const CanteenDirectoryScreen: React.FC<CanteenDirectoryScreenProps> = ({ 
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.tab, selectedBldg === 'bldg-main' && styles.activeTab]}
-            onPress={() => setSelectedBldg('bldg-main')}
+            style={[styles.tab, (selectedBldg === 'bldg-main' || selectedBldg === 'bldg_main') && styles.activeTab]}
+            onPress={() => setSelectedBldg('bldg_main')}
           >
-            <Text style={[styles.tabText, selectedBldg === 'bldg-main' && styles.activeTabText]}>
-              Main Building (F1–F6)
+            <Text style={[styles.tabText, (selectedBldg === 'bldg-main' || selectedBldg === 'bldg_main') && styles.activeTabText]}>
+              Main Building
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.tab, selectedBldg === 'bldg-law' && styles.activeTab]}
-            onPress={() => setSelectedBldg('bldg-law')}
+            style={[styles.tab, (selectedBldg === 'bldg-law' || selectedBldg === 'bldg_law') && styles.activeTab]}
+            onPress={() => setSelectedBldg('bldg_law')}
           >
-            <Text style={[styles.tabText, selectedBldg === 'bldg-law' && styles.activeTabText]}>
+            <Text style={[styles.tabText, (selectedBldg === 'bldg-law' || selectedBldg === 'bldg_law') && styles.activeTabText]}>
               Law Bldg
             </Text>
           </TouchableOpacity>
 
           <TouchableOpacity 
-            style={[styles.tab, selectedBldg === 'bldg-hostel' && styles.activeTab]}
-            onPress={() => setSelectedBldg('bldg-hostel')}
+            style={[styles.tab, (selectedBldg === 'bldg-hostel' || selectedBldg === 'bldg_hostel') && styles.activeTab]}
+            onPress={() => setSelectedBldg('bldg_hostel')}
           >
-            <Text style={[styles.tabText, selectedBldg === 'bldg-hostel' && styles.activeTabText]}>
+            <Text style={[styles.tabText, (selectedBldg === 'bldg-hostel' || selectedBldg === 'bldg_hostel') && styles.activeTabText]}>
               Hostel Mess
             </Text>
           </TouchableOpacity>
         </View>
 
-        {/* Canteen Cards List */}
+        {/* Canteen Cards List (Full width Swiggy Style) */}
         <View style={styles.list}>
           {filteredCanteens.map((canteen) => (
             <CanteenCard
               key={canteen.canteen_id}
               canteen={canteen}
               userRole={role}
+              compactGrid={false}
               onPress={(c) => {
                 if (c.canteen_type === 'faculty_only' && role !== 'faculty' && role !== 'admin') {
                   alert('Faculty Only: Access to this dining hall is restricted to university faculty.');
@@ -129,86 +136,16 @@ export const CanteenDirectoryScreen: React.FC<CanteenDirectoryScreenProps> = ({ 
               }}
             />
           ))}
+
+          {filteredCanteens.length === 0 && (
+             <View style={styles.emptyContainer}>
+               <Store size={48} color={colors.textMuted} />
+               <Text style={styles.emptyTitle}>No Canteens Found</Text>
+               <Text style={styles.emptySubtitle}>Try adjusting your search or building filter</Text>
+             </View>
+          )}
         </View>
       </ScrollView>
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  backButton: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  searchBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderRadius: borderRadius.md,
-    paddingHorizontal: spacing.md,
-    height: 44,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: typography.fontSizes.xs,
-    color: colors.textPrimary,
-  },
-  buildingTabsRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    marginBottom: spacing.lg,
-  },
-  tab: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    borderRadius: borderRadius.round,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  activeTab: {
-    backgroundColor: colors.primaryLight,
-    borderColor: colors.primary,
-  },
-  tabText: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textSecondary,
-    fontWeight: '500',
-  },
-  activeTabText: {
-    color: colors.primaryDark,
-    fontWeight: '700',
-  },
-  list: {
-    gap: spacing.sm,
-  },
-});
-

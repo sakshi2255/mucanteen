@@ -2,14 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { 
   View, 
   Text, 
-  StyleSheet, 
   TextInput, 
   TouchableOpacity, 
-  Alert,
-  SafeAreaView 
+  Alert
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, CheckCircle2, Search, Hash } from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+import { colors, spacing } from '../../config/theme';
+import { styles } from '../../styles/operator/PickupVerificationStyles';
 import { useAuth } from '../../context/AuthContext';
 import { listenOperatorOrders, updateOrderStatusInFirestore } from '../../services/firestoreService';
 import type { Order } from '../../models/types';
@@ -20,7 +20,7 @@ interface PickupVerificationScreenProps {
 
 export const PickupVerificationScreen: React.FC<PickupVerificationScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen-mb-f1';
+  const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen_main_1';
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [tokenInput, setTokenInput] = useState('');
@@ -129,9 +129,9 @@ export const PickupVerificationScreen: React.FC<PickupVerificationScreenProps> =
             {/* Items */}
             <View style={styles.itemsBox}>
               <Text style={styles.itemsBoxTitle}>Items to Hand Over:</Text>
-              {matchedOrder.items_snapshot.map((it, idx) => (
+              {(matchedOrder.items_snapshot || []).map((it, idx) => (
                 <Text key={idx} style={styles.itemLine}>
-                  • {it.quantity}x {it.item_name} (₹{it.subtotal})
+                  • {it.quantity}x {it.item_name} (₹{it.subtotal || it.price * it.quantity})
                 </Text>
               ))}
             </View>
@@ -158,178 +158,4 @@ export const PickupVerificationScreen: React.FC<PickupVerificationScreenProps> =
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  backBtn: {
-    padding: 4,
-  },
-  headerTitle: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  inputCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.lg,
-    ...shadows.sm,
-  },
-  inputPrompt: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: spacing.sm,
-  },
-  inputRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  hashBadge: {
-    width: 44,
-    height: 44,
-    borderRadius: borderRadius.sm,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  tokenTextInput: {
-    flex: 1,
-    height: 44,
-    backgroundColor: colors.surfaceAlt,
-    borderRadius: borderRadius.sm,
-    paddingHorizontal: spacing.md,
-    fontSize: typography.fontSizes.md,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  verifyBtn: {
-    backgroundColor: colors.primary,
-    height: 44,
-    paddingHorizontal: spacing.lg,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: borderRadius.sm,
-  },
-  verifyBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: typography.fontSizes.xs,
-  },
-  orderResultCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.lg,
-    borderRadius: borderRadius.lg,
-    borderWidth: 2,
-    borderColor: colors.accentGreen,
-    ...shadows.md,
-  },
-  resultHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  tokenHeroBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: borderRadius.md,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: colors.primary,
-  },
-  tokenHeroText: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: colors.primaryDark,
-  },
-  customerName: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  orderIdText: {
-    fontSize: 10,
-    color: colors.textMuted,
-    marginTop: 2,
-  },
-  readyTag: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: colors.accentGreen,
-    marginTop: 3,
-  },
-  itemsBox: {
-    backgroundColor: colors.surfaceAlt,
-    padding: spacing.md,
-    borderRadius: borderRadius.sm,
-    marginVertical: spacing.md,
-  },
-  itemsBoxTitle: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: '700',
-    color: colors.textPrimary,
-    marginBottom: 4,
-  },
-  itemLine: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  confirmPickupButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: colors.accentGreen,
-    paddingVertical: 12,
-    borderRadius: borderRadius.md,
-    gap: 8,
-  },
-  confirmPickupText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: typography.fontSizes.xs,
-    letterSpacing: 0.3,
-  },
-  helperCard: {
-    backgroundColor: colors.surfaceAlt,
-    padding: spacing.lg,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  helperTitle: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: '800',
-    color: colors.textPrimary,
-    marginBottom: spacing.sm,
-  },
-  helperStep: {
-    fontSize: typography.fontSizes.xs,
-    color: colors.textSecondary,
-    marginBottom: 6,
-    lineHeight: 18,
-  },
-});
 

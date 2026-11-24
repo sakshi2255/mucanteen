@@ -3,7 +3,9 @@ import type {
   MenuCategory, 
   MenuItem, 
   Promotion, 
-  UserProfile 
+  UserProfile,
+  Revenue,
+  PaymentHistory
 } from '../models/types';
 
 export const INITIAL_CANTEENS: Canteen[] = [
@@ -341,7 +343,7 @@ export const INITIAL_MENU_ITEMS: MenuItem[] = [
 
 export const DEMO_PROFILES: UserProfile[] = [
   {
-    user_id: 'demo_student_aarav',
+    user_id: 'MQ0t0Npgc8YZ84BBA9TJj0Hsxfu1',
     name: 'Aarav Patel',
     enrollment_number: '92100103001',
     email: 'student@marwadiuniversity.ac.in',
@@ -355,7 +357,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_faculty_rajesh',
+    user_id: 'G5haZNruKoWvbuZ1GLqEViMGnEI2',
     name: 'Prof. Rajesh Sharma',
     enrollment_number: 'FAC-CE-108',
     email: 'faculty@marwadiuniversity.ac.in',
@@ -369,7 +371,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_operator_c1',
+    user_id: 'kUAxH2ffeTgYjkVtCyF3o5t7zms1',
     name: 'Kishore Bhai (Canteen 1)',
     enrollment_number: 'OP-MAIN-1',
     email: 'operator1@marwadiuniversity.ac.in',
@@ -382,7 +384,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_operator_c2',
+    user_id: 'Za3OUQPOnnOzeo3CkBX1ael6iEv1',
     name: 'Ramesh Bhai (Canteen 2)',
     enrollment_number: 'OP-MAIN-2',
     email: 'operator2@marwadiuniversity.ac.in',
@@ -395,7 +397,7 @@ export const DEMO_PROFILES: UserProfile[] = [
     updated_at: new Date().toISOString(),
   },
   {
-    user_id: 'demo_admin_campus',
+    user_id: 'nIMAuizi4dciH3yfbDkYuEYgKYF3',
     name: 'Campus Director (Admin)',
     enrollment_number: 'ADMIN-001',
     email: 'admin@marwadiuniversity.ac.in',
@@ -406,5 +408,80 @@ export const DEMO_PROFILES: UserProfile[] = [
     assigned_canteen_ids: [],
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
+  },];
+export const INITIAL_REVENUE: Revenue[] = [
+  {
+    id: 'rev_canteen_main_1',
+    revenue_id: 'rev_canteen_main_1',
+    canteen_id: 'canteen_main_1',
+    date: new Date().toISOString().split('T')[0],
+    total_revenue: 3200,
+    total_orders: 38,
+    updated_at: new Date().toISOString()
   },
+  {
+    id: 'rev_canteen_main_2',
+    revenue_id: 'rev_canteen_main_2',
+    canteen_id: 'canteen_main_2',
+    date: new Date().toISOString().split('T')[0],
+    total_revenue: 1500,
+    total_orders: 18,
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'rev_canteen_law_1',
+    revenue_id: 'rev_canteen_law_1',
+    canteen_id: 'canteen_law_1',
+    date: new Date().toISOString().split('T')[0],
+    total_revenue: 4100,
+    total_orders: 52,
+    updated_at: new Date().toISOString()
+  },
+  {
+    id: 'rev_canteen_faculty_3',
+    revenue_id: 'rev_canteen_faculty_3',
+    canteen_id: 'canteen_faculty_3',
+    date: new Date().toISOString().split('T')[0],
+    total_revenue: 2800,
+    total_orders: 14,
+    updated_at: new Date().toISOString()
+  }
 ];
+
+export const INITIAL_PAYMENTS_HISTORY: PaymentHistory[] = [
+  {
+    id: 'pay_001',
+    payment_id: 'pay_001',
+    user_id: 'MQ0t0Npgc8YZ84BBA9TJj0Hsxfu1',
+    order_id: 'ord_101',
+    canteen_id: 'canteen_main_1',
+    price: 105,
+    payment_mode: 'online_demo',
+    payment_status: 'PAID_ONLINE_DEMO',
+    timestamp: new Date().toISOString()
+  },
+  {
+    id: 'pay_002',
+    payment_id: 'pay_002',
+    user_id: 'MQ0t0Npgc8YZ84BBA9TJj0Hsxfu1',
+    order_id: 'ord_102',
+    canteen_id: 'canteen_law_1',
+    price: 45,
+    payment_mode: 'cash',
+    payment_status: 'CASH_RECEIVED',
+    timestamp: new Date(Date.now() - 86400000).toISOString()
+  },
+  {
+    id: 'pay_003',
+    payment_id: 'pay_003',
+    user_id: 'G5haZNruKoWvbuZ1GLqEViMGnEI2',
+    order_id: 'ord_103',
+    canteen_id: 'canteen_faculty_3',
+    price: 140,
+    payment_mode: 'online_demo',
+    payment_status: 'PAID_ONLINE_DEMO',
+    timestamp: new Date().toISOString()
+  }
+];
+
+export const INITIAL_PAYMENT_HISTORY = INITIAL_PAYMENTS_HISTORY;

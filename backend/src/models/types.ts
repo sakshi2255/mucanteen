@@ -178,3 +178,36 @@ export interface AuditLog {
   timestamp: string;
   source: 'client' | 'function' | 'system';
 }
+
+export interface PaymentHistory {
+  id?: string;
+  payment_id: string;
+  order_id: string;
+  user_id: string;
+  canteen_id: string;
+  payment_mode: PaymentMethod;
+  price: number;
+  payment_status: PaymentStatus;
+  timestamp: string;
+}
+
+export interface Revenue {
+  id?: string;
+  revenue_id: string;
+  canteen_id: string;
+  date: string; // YYYY-MM-DD
+  total_orders: number;
+  total_revenue: number;
+  updated_at: string;
+}
+
+export interface AppNotification {
+  notification_id: string;
+  user_id: string;
+  order_id: string;
+  title: string;
+  body: string;
+  type: 'order_placed' | 'order_accepted' | 'order_preparing' | 'order_ready' | 'pickup_warning' | 'pickup_failed' | 'order_declined' | 'order_cancelled';
+  is_read: boolean;
+  created_at: string;
+}

@@ -1,18 +1,17 @@
 import type { OrderCounter } from '../models/types.js';
 
 export function getISTDateString(date: Date = new Date()): string {
-  try {
-    const formatter = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'Asia/Kolkata',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    });
-    return formatter.format(date);
-  } catch (e) {
-    const d = new Date(date.getTime() + (5.5 * 60 + date.getTimezoneOffset()) * 60000);
-    return d.toISOString().split('T')[0]!;
-  }
+  // A completely deterministic method that avoids Intl locale inconsistencies.
+  // It calculates the exact UTC offset for Asia/Kolkata (+5:30) 
+  // ensuring the format is strictly YYYY-MM-DD regardless of the Node.js environment.
+  const utc = date.getTime() + (date.getTimezoneOffset() * 60000);
+  const ist = new Date(utc + (3600000 * 5.5));
+  
+  const yyyy = ist.getFullYear();
+  const mm = String(ist.getMonth() + 1).padStart(2, '0');
+  const dd = String(ist.getDate()).padStart(2, '0');
+  
+  return `${yyyy}-${mm}-${dd}`;
 }
 
 export function calculateNextTokenWithPrefix(
@@ -31,6 +30,7 @@ export function calculateNextTokenWithPrefix(
 
   if (currentCounter) {
     nextLifetime = (currentCounter.lifetime_order_count || 0) + 1;
+    // Strict comparison works flawlessly now because getISTDateString is deterministic
     if (currentCounter.token_date === targetDateIST) {
       nextDailyToken = (currentCounter.last_token_number || 0) + 1;
     } else {

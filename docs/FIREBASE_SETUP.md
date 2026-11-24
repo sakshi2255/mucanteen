@@ -18,7 +18,7 @@ The project is pre-configured with the official university project keys extracte
   "storageBucket": "mu-canteen-b895a.firebasestorage.app",
   "authDomain": "mu-canteen-b895a.firebaseapp.com",
   "appId": "1:231604059707:android:cabf8e38c301d1a3fc261e",
-  "androidPackage": "com.marwadiuniversity.mucanteen"
+  "androidPackage": "com.marwadiuniversity.mucanteen2"
 }
 ```
 

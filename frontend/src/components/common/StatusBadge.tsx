@@ -1,6 +1,7 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, borderRadius } from '../../config/theme';
+import { View, Text } from 'react-native';
+import { colors } from '../../config/theme';
+import { styles } from '../../styles/comman/StatusBadgeStyles';
 import type { OrderStatus } from '../../models/types';
 
 interface StatusBadgeProps {
@@ -65,16 +66,4 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({ status, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
-  badge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: borderRadius.sm,
-    alignSelf: 'flex-start',
-  },
-  badgeText: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: typography.fontWeights.bold,
-  },
-});
 

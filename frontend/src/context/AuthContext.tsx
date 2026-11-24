@@ -19,18 +19,21 @@ interface AuthContextType {
   login: (email: string, pass: string) => Promise<void>;
   register: (name: string, email: string, pass: string, enrollmentNumber: string, role: UserRole) => Promise<void>;
   logout: () => Promise<void>;
-  switchDemoRole: (role: UserRole) => void;
+  switchDemoUser: (targetUser: UserProfile) => void;
 }
 
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Default to student demo user for immediate review capability
   const [user, setUser] = useState<UserProfile | null>(DEMO_PROFILES[0]);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
+    if (!auth.currentUser) {
+      signInWithEmailAndPassword(auth, 'student@marwadiuniversity.ac.in', 'password123').catch(() => {});
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
       if (fbUser) {
@@ -39,8 +42,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           if (userDoc.exists()) {
             setUser(userDoc.data() as UserProfile);
           } else {
-            // If user logged into auth but document doesn't exist yet
-            const defaultProfile: UserProfile = {
+            const matchedDemo = DEMO_PROFILES.find((p) => p.email.toLowerCase() === (fbUser.email || '').toLowerCase());
+            const defaultProfile: UserProfile = matchedDemo ? { ...matchedDemo, user_id: fbUser.uid } : {
               user_id: fbUser.uid,
               name: fbUser.displayName || fbUser.email?.split('@')[0] || 'MU Student',
               enrollment_number: '92100103001',
@@ -75,34 +78,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(userDoc.data() as UserProfile);
       }
     } catch (e: any) {
-      console.warn('Firebase login attempt notice:', e.message);
-      // Quick fallback demo matching for reviewer convenience
       const matched = DEMO_PROFILES.find((p) => p.email.toLowerCase() === email.toLowerCase());
-      if (matched) {
-        setUser(matched);
-      } else {
-        throw e;
-      }
+      if (matched) setUser(matched);
+      else throw e;
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (
-    name: string,
-    email: string,
-    pass: string,
-    enrollmentNumber: string,
-    role: UserRole
-  ) => {
+  const register = async (name: string, email: string, pass: string, enrollmentNumber: string, role: UserRole) => {
     setIsLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
-      const roleName = 
-        role === 'admin' ? 'College Administrator' :
-        role === 'operator' ? 'Canteen Operator' :
-        role === 'faculty' ? 'Faculty' : 'Student';
-
+      const roleName = role === 'admin' ? 'College Administrator' : role === 'operator' ? 'Canteen Operator' : role === 'faculty' ? 'Faculty' : 'Student';
       const newProfile: UserProfile = {
         user_id: cred.user.uid,
         name,
@@ -112,53 +100,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         role: roleName,
         account_status: 'active',
         is_deleted: false,
-        assigned_canteen_ids: role === 'operator' ? ['canteen-mb-f1'] : [],
+        assigned_canteen_ids: role === 'operator' ? ['canteen_main_1'] : [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
-
       await setDoc(doc(db, 'users', cred.user.uid), newProfile);
       setUser(newProfile);
-    } catch (e: any) {
-      console.warn('Registration notice:', e.message);
-      throw e;
     } finally {
       setIsLoading(false);
     }
   };
 
   const logout = async () => {
-    try {
-      await signOut(auth);
-    } catch (e) {
-      // Ignore
-    }
+    try { await signOut(auth); } catch (e) {}
     setUser(null);
     setFirebaseUser(null);
   };
 
-  const switchDemoRole = (targetRole: UserRole) => {
-    const profile = DEMO_PROFILES.find((p) => p.role_id === targetRole) || DEMO_PROFILES[0];
-    setUser(profile);
+  // Upgraded to accept specific user profiles from Firestore
+  const switchDemoUser = (targetUser: UserProfile) => {
+    setUser(targetUser);
+    if (targetUser.email) {
+      // Attempt backend auth silently if they have standard password
+      signInWithEmailAndPassword(auth, targetUser.email, 'password123').catch(() => {});
+    }
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        firebaseUser,
-        isLoading,
-        role: user?.role_id || 'student',
-        login,
-        register,
-        logout,
-        switchDemoRole,
-      }}
-    >
+    <AuthContext.Provider value={{ user, firebaseUser, isLoading, role: user?.role_id || 'student', login, register, logout, switchDemoUser }}>
       {children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-

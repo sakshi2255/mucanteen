@@ -15,16 +15,16 @@ let app: FirebaseApp;
 let auth: Auth;
 let db: Firestore;
 
-try {
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Safely initialize Firebase to avoid hot-reloading crashes
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+
   auth = getAuth(app);
-  db = getFirestore(app);
-} catch (error) {
-  console.warn('Firebase initialization notice:', error);
-  app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
+} else {
+  app = getApp();
   auth = getAuth(app);
-  db = getFirestore(app);
 }
 
-export { app, auth, db };
+db = getFirestore(app);
 
+export { app, auth, db };

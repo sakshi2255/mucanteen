@@ -1,25 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity,
-  SafeAreaView 
-} from 'react-native';
-import { 
-  ShieldAlert, 
-  Users, 
-  Store, 
-  ListOrdered, 
-  FileText, 
-  TrendingUp,
-  Settings 
-} from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+import { View, Text, ScrollView, TouchableOpacity } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Users, Store, ListOrdered, FileText } from 'lucide-react-native';
+import { colors } from '../../config/theme';
 import { DashboardNavCard } from '../../components/common/DashboardNavCard';
 import { useAuth } from '../../context/AuthContext';
 import { listenAllOrders, listenCanteens } from '../../services/firestoreService';
+import { styles } from '../../styles/admin/AdminDashboardStyles';
 import type { Order, Canteen } from '../../models/types';
 
 interface AdminDashboardScreenProps {
@@ -40,10 +27,6 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
     };
   }, []);
 
-  const totalCampusRevenue = orders
-    .filter((o) => o.order_status === 'picked_up')
-    .reduce((sum, o) => sum + o.total, 0);
-
   const activeCanteensCount = canteens.filter((c) => c.is_open).length;
 
   return (
@@ -53,7 +36,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
           <Text style={styles.headerRole}>ADMINISTRATION PORTAL</Text>
           <Text style={styles.headerTitle}>Marwadi University Canteens</Text>
         </View>
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.profileBtn}
           onPress={() => navigation.navigate('Profile')}
         >
@@ -61,12 +44,11 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.container} 
+      <ScrollView
+        style={styles.container}
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
       >
-        {/* Campus Overview Cards */}
         <View style={styles.statsCard}>
           <Text style={styles.statsTitle}>CAMPUS FOOD SERVICE OVERVIEW</Text>
           <View style={styles.statsRow}>
@@ -91,7 +73,6 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
           </View>
         </View>
 
-        {/* Administration Navigation Cards (MU Student Portal Inspired) */}
         <Text style={styles.sectionHeading}>Campus Governance</Text>
 
         <DashboardNavCard
@@ -104,7 +85,7 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
 
         <DashboardNavCard
           title="Canteen Facility Management"
-          subtitle="10 campus points: Main Bldg, Law & Mess"
+          subtitle={`${canteens.length} campus points: Main Bldg, Law & Mess`}
           icon={<Store size={20} color={colors.primary} />}
           onPress={() => navigation.navigate('CanteenManagement')}
         />
@@ -126,98 +107,3 @@ export const AdminDashboardScreen: React.FC<AdminDashboardScreenProps> = ({ navi
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  headerRole: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1,
-  },
-  headerTitle: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  profileBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.primaryDark,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  statsCard: {
-    backgroundColor: colors.primary,
-    borderRadius: borderRadius.lg,
-    padding: spacing.lg,
-    marginBottom: spacing.lg,
-    ...shadows.md,
-  },
-  statsTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#E0F2FE',
-    letterSpacing: 0.8,
-    marginBottom: spacing.md,
-    textAlign: 'center',
-  },
-  statsRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statValue: {
-    color: '#FFFFFF',
-    fontSize: typography.fontSizes.xxl,
-    fontWeight: typography.fontWeights.heavy,
-  },
-  statDesc: {
-    color: '#E0F2FE',
-    fontSize: 10,
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  statDivider: {
-    width: 1,
-    height: 30,
-    backgroundColor: 'rgba(255,255,255,0.25)',
-  },
-  sectionHeading: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-  },
-});
-

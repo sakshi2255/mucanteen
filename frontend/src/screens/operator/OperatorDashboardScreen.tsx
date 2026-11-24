@@ -1,33 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  ScrollView, 
-  TouchableOpacity, 
-  Switch,
-  SafeAreaView 
-} from 'react-native';
-import { 
-  Store, 
-  ListOrdered, 
-  UtensilsCrossed, 
-  CheckCircle2, 
-  BarChart3, 
-  Clock, 
-  Zap, 
-  Layers,
-  TrendingUp 
-} from 'lucide-react-native';
-import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
+import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { ListOrdered, UtensilsCrossed, CheckCircle2, BarChart3 } from 'lucide-react-native';
+import { colors } from '../../config/theme';
 import { DashboardNavCard } from '../../components/common/DashboardNavCard';
 import { useAuth } from '../../context/AuthContext';
-import { 
-  listenOperatorOrders, 
-  listenCanteens, 
-  toggleCanteenStatus 
-} from '../../services/firestoreService';
+import { listenOperatorOrders, listenCanteens, toggleCanteenStatus } from '../../services/firestoreService';
 import type { Canteen, Order } from '../../models/types';
+import { styles } from '../../styles/operator/OperatorDashboardStyles';
 
 interface OperatorDashboardScreenProps {
   navigation: any;
@@ -35,23 +15,19 @@ interface OperatorDashboardScreenProps {
 
 export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
-  const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen-mb-f1';
+  const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen_main_1';
 
   const [canteen, setCanteen] = useState<Canteen | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
 
   useEffect(() => {
-    // Listen to canteen status
     const unsubCanteens = listenCanteens((list) => {
       const match = list.find((c) => c.canteen_id === assignedCanteenId);
       if (match) setCanteen(match);
     });
-
-    // Listen to orders for this assigned canteen
     const unsubOrders = listenOperatorOrders(assignedCanteenId, (orderList) => {
       setOrders(orderList);
     });
-
     return () => {
       unsubCanteens();
       unsubOrders();
@@ -67,43 +43,33 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
     );
   };
 
-  // Stats calculation
   const pendingCount = orders.filter((o) => o.order_status === 'awaiting_acceptance').length;
   const preparingCount = orders.filter((o) => o.order_status === 'preparing').length;
   const readyCount = orders.filter((o) => o.order_status === 'ready_for_pickup').length;
-  const completedToday = orders.filter((o) => o.order_status === 'picked_up').length;
   const todayRevenue = orders
-    .filter((o) => o.order_status === 'picked_up')
-    .reduce((sum, o) => sum + o.total, 0);
+    .filter((o) => o.order_status === 'picked_up' || o.payment_status === 'PAID_ONLINE_DEMO' || o.payment_status === 'CASH_RECEIVED')
+    .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
         <View>
           <Text style={styles.headerRole}>OPERATOR CONSOLE</Text>
-          <Text style={styles.headerTitle}>{canteen?.name || 'Canteen F1'}</Text>
+          <Text style={styles.headerTitle}>{canteen?.name || 'Canteen Console'}</Text>
         </View>
-        <TouchableOpacity 
-          style={styles.profileBtn}
-          onPress={() => navigation.navigate('Profile')}
-        >
+        <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Profile')}>
           <Text style={styles.profileBtnText}>{user?.name?.slice(0, 2).toUpperCase()}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView 
-        style={styles.container} 
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Canteen Open / Closed & Acceptance Mode Card */}
+      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.canteenStatusCard}>
           <View style={styles.toggleRow}>
-            <View style={{ flex: 1 }}>
+            <View style={styles.toggleTextCol}>
               <Text style={styles.toggleTitle}>Canteen Serving Status</Text>
               <Text style={styles.toggleSubtitle}>
-                {canteen?.is_open 
-                  ? 'Open — Accepting instant and preorders' 
+                {canteen?.is_open
+                  ? 'Open — Accepting instant and preorders'
                   : 'Closed — Students cannot place new orders'}
               </Text>
             </View>
@@ -116,30 +82,45 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
           </View>
         </View>
 
-        {/* Live Metrics Grid */}
+        {/* Clickable Live Metrics Grid */}
         <View style={styles.metricsGrid}>
-          <View style={[styles.metricCard, { borderLeftColor: '#F59E0B' }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, styles.metricQueue]}
+            onPress={() => navigation.navigate('OperatorQueue', { initialTab: 'active' })}
+            activeOpacity={0.8}
+          >
             <Text style={styles.metricLabel}>IN QUEUE</Text>
-            <Text style={[styles.metricValue, { color: '#B45309' }]}>{pendingCount}</Text>
-          </View>
+            <Text style={[styles.metricValue, styles.valueQueue]}>{pendingCount}</Text>
+          </TouchableOpacity>
 
-          <View style={[styles.metricCard, { borderLeftColor: '#0284C7' }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, styles.metricPreparing]}
+            onPress={() => navigation.navigate('OperatorQueue', { initialTab: 'active' })}
+            activeOpacity={0.8}
+          >
             <Text style={styles.metricLabel}>PREPARING</Text>
-            <Text style={[styles.metricValue, { color: '#0369A1' }]}>{preparingCount}</Text>
-          </View>
+            <Text style={[styles.metricValue, styles.valuePreparing]}>{preparingCount}</Text>
+          </TouchableOpacity>
 
-          <View style={[styles.metricCard, { borderLeftColor: colors.accentGreen }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, styles.metricReady]}
+            onPress={() => navigation.navigate('OperatorQueue', { initialTab: 'ready' })}
+            activeOpacity={0.8}
+          >
             <Text style={styles.metricLabel}>READY</Text>
-            <Text style={[styles.metricValue, { color: '#047857' }]}>{readyCount}</Text>
-          </View>
+            <Text style={[styles.metricValue, styles.valueReady]}>{readyCount}</Text>
+          </TouchableOpacity>
 
-          <View style={[styles.metricCard, { borderLeftColor: colors.primary }]}>
+          <TouchableOpacity
+            style={[styles.metricCard, styles.metricRevenue]}
+            onPress={() => navigation.navigate('OperatorReports')}
+            activeOpacity={0.8}
+          >
             <Text style={styles.metricLabel}>REVENUE</Text>
-            <Text style={[styles.metricValue, { color: colors.primaryDark }]}>₹{todayRevenue}</Text>
-          </View>
+            <Text style={[styles.metricValue, styles.valueRevenue]}>₹{todayRevenue}</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Navigation Cards (MU Student Portal Inspired) */}
         <Text style={styles.sectionHeading}>Management Actions</Text>
 
         <DashboardNavCard
@@ -152,7 +133,7 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
 
         <DashboardNavCard
           title="Menu Availability"
-          subtitle="Toggle Sold Out & available items instantly"
+          subtitle="Toggle Sold Out, edit dishes & manage categories"
           icon={<UtensilsCrossed size={20} color={colors.primary} />}
           onPress={() => navigation.navigate('MenuManagement')}
         />
@@ -165,8 +146,8 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
         />
 
         <DashboardNavCard
-          title="Daily Reports & Revenue"
-          subtitle="Summary of fulfilled orders & sales"
+          title="Reports, Orders & Payments"
+          subtitle="Revenue, past order search & payment history"
           icon={<BarChart3 size={20} color={colors.primary} />}
           onPress={() => navigation.navigate('OperatorReports')}
         />
@@ -174,111 +155,3 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
     </SafeAreaView>
   );
 };
-
-const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: colors.surface,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: colors.borderLight,
-  },
-  headerRole: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: colors.primary,
-    letterSpacing: 1,
-  },
-  headerTitle: {
-    fontSize: typography.fontSizes.base,
-    fontWeight: typography.fontWeights.heavy,
-    color: colors.textPrimary,
-  },
-  profileBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: colors.primaryLight,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  profileBtnText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: colors.primaryDark,
-  },
-  container: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-  },
-  canteenStatusCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    marginBottom: spacing.md,
-    ...shadows.sm,
-  },
-  toggleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  toggleTitle: {
-    fontSize: typography.fontSizes.sm,
-    fontWeight: typography.fontWeights.bold,
-    color: colors.textPrimary,
-  },
-  toggleSubtitle: {
-    fontSize: 11,
-    color: colors.textSecondary,
-    marginTop: 2,
-  },
-  metricsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: spacing.lg,
-  },
-  metricCard: {
-    flex: 1,
-    minWidth: '45%',
-    backgroundColor: colors.surface,
-    padding: spacing.md,
-    borderRadius: borderRadius.md,
-    borderWidth: 1,
-    borderColor: colors.border,
-    borderLeftWidth: 4,
-    ...shadows.sm,
-  },
-  metricLabel: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: colors.textMuted,
-    letterSpacing: 0.5,
-  },
-  metricValue: {
-    fontSize: typography.fontSizes.xl,
-    fontWeight: typography.fontWeights.heavy,
-    marginTop: 4,
-  },
-  sectionHeading: {
-    fontSize: typography.fontSizes.xs,
-    fontWeight: '800',
-    color: colors.textSecondary,
-    letterSpacing: 0.5,
-    marginBottom: spacing.sm,
-    textTransform: 'uppercase',
-  },
-});
-
