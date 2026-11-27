@@ -1,15 +1,36 @@
-import { sendPushToUser } from './notificationService';
-import { 
-  collection, doc, getDoc, getDocs, setDoc, updateDoc,
-  onSnapshot, query, where, orderBy, runTransaction, limit, Unsubscribe 
+import {
+  collection,
+  doc,
+  getDoc,
+  getDocs,
+  setDoc,
+  updateDoc,
+  onSnapshot,
+  query,
+  where,
+  orderBy,
+  runTransaction,
+  limit,
+  Unsubscribe,
 } from 'firebase/firestore';
 import { auth, db } from '../config/firebaseConfig';
 import { getISTDateString, calculateNextTokenWithPrefix, type OrderCounter } from './tokenService';
 import { INITIAL_CANTEENS, INITIAL_CATEGORIES, INITIAL_MENU_ITEMS, INITIAL_PROMOTIONS } from './seedData';
-import type { 
-  Canteen, MenuCategory, MenuItem, Order, OrderStatus, 
-  PaymentMethod, PaymentStatus, Promotion, UserProfile, 
-  AuditLog, PaymentHistory, Revenue, AppNotification, NotificationSettings 
+import type {
+  Canteen,
+  MenuCategory,
+  MenuItem,
+  Order,
+  OrderStatus,
+  PaymentMethod,
+  PaymentStatus,
+  Promotion,
+  UserProfile,
+  AuditLog,
+  PaymentHistory,
+  Revenue,
+  AppNotification,
+  NotificationSettings,
 } from '../models/types';
 
 let localOrders: Order[] = [];
@@ -55,14 +76,18 @@ export async function initializeFirestoreIfNeeded(): Promise<void> {
 export function listenCanteens(callback: (canteens: Canteen[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'canteens'), where('is_active', '==', true));
-    return onSnapshot(q, (snapshot) => {
-      const canteens = snapshot.docs.map((d) => d.data() as Canteen);
-      localCanteens = canteens;
-      callback(canteens);
-    }, (error) => {
-      console.warn('Canteens listener error:', error.message);
-      callback(localCanteens);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const canteens = snapshot.docs.map((d) => d.data() as Canteen);
+        localCanteens = canteens;
+        callback(canteens);
+      },
+      (error) => {
+        console.warn('Canteens listener error:', error.message);
+        callback(localCanteens);
+      }
+    );
   } catch {
     callback(localCanteens);
     return () => {};
@@ -72,14 +97,18 @@ export function listenCanteens(callback: (canteens: Canteen[]) => void): Unsubsc
 export function listenPromotions(callback: (promotions: Promotion[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'promotions'), where('is_active', '==', true));
-    return onSnapshot(q, (snapshot) => {
-      const promos = snapshot.docs.map((d) => d.data() as Promotion);
-      localPromotions = promos;
-      callback(promos);
-    }, (error) => {
-      console.warn('Promotions listener error:', error.message);
-      callback(localPromotions);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const promos = snapshot.docs.map((d) => d.data() as Promotion);
+        localPromotions = promos;
+        callback(promos);
+      },
+      (error) => {
+        console.warn('Promotions listener error:', error.message);
+        callback(localPromotions);
+      }
+    );
   } catch {
     callback(localPromotions);
     return () => {};
@@ -89,15 +118,19 @@ export function listenPromotions(callback: (promotions: Promotion[]) => void): U
 export function listenCategories(callback: (categories: MenuCategory[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'menuCategories'), where('is_active', '==', true));
-    return onSnapshot(q, (snapshot) => {
-      const cats = snapshot.docs.map((d) => d.data() as MenuCategory);
-      cats.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
-      localCategories = cats;
-      callback(cats);
-    }, (error) => {
-      console.warn('Categories listener error:', error.message);
-      callback(localCategories);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const cats = snapshot.docs.map((d) => d.data() as MenuCategory);
+        cats.sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+        localCategories = cats;
+        callback(cats);
+      },
+      (error) => {
+        console.warn('Categories listener error:', error.message);
+        callback(localCategories);
+      }
+    );
   } catch {
     callback(localCategories);
     return () => {};
@@ -107,19 +140,29 @@ export function listenCategories(callback: (categories: MenuCategory[]) => void)
 export function listenMenuItems(canteenId: string | null, callback: (items: MenuItem[]) => void): Unsubscribe {
   try {
     const coll = collection(db, 'menuItems');
-    const q = canteenId 
+    const q = canteenId
       ? query(coll, where('canteen_id', '==', canteenId), where('is_active', '==', true))
       : query(coll, where('is_active', '==', true));
-    return onSnapshot(q, (snapshot) => {
-      const items = snapshot.docs.map((d) => d.data() as MenuItem);
-      callback(items);
-    }, (error) => {
-      console.warn('Menu items listener error:', error.message);
-      const filtered = canteenId ? localMenuItems.filter((i) => i.canteen_id === canteenId && i.is_active) : localMenuItems.filter(i => i.is_active);
-      callback(filtered);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const items = snapshot.docs.map((d) => d.data() as MenuItem);
+        callback(items);
+      },
+      (error) => {
+        console.warn('Menu items listener error:', error.message);
+        const filtered = canteenId
+          ? localMenuItems.filter((i) => i.canteen_id === canteenId && i.is_active)
+          : localMenuItems.filter((i) => i.is_active);
+        callback(filtered);
+      }
+    );
   } catch {
-    callback(canteenId ? localMenuItems.filter((i) => i.canteen_id === canteenId && i.is_active) : localMenuItems.filter(i => i.is_active));
+    callback(
+      canteenId
+        ? localMenuItems.filter((i) => i.canteen_id === canteenId && i.is_active)
+        : localMenuItems.filter((i) => i.is_active)
+    );
     return () => {};
   }
 }
@@ -127,21 +170,29 @@ export function listenMenuItems(canteenId: string | null, callback: (items: Menu
 export function listenOperatorOrders(canteenId: string, callback: (orders: Order[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'orders'), where('canteen_id', '==', canteenId), orderBy('created_at', 'desc'));
-    return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map((d) => d.data() as Order);
-      for (const order of orders) {
-        const idx = localOrders.findIndex((o) => o.order_id === order.order_id);
-        if (idx >= 0) localOrders[idx] = order;
-        else localOrders.push(order);
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const orders = snapshot.docs.map((d) => d.data() as Order);
+        for (const order of orders) {
+          const idx = localOrders.findIndex((o) => o.order_id === order.order_id);
+          if (idx >= 0) localOrders[idx] = order;
+          else localOrders.push(order);
+        }
+        callback(orders);
+      },
+      (error) => {
+        console.warn('Operator orders listener error:', error.message);
+        const filtered = localOrders
+          .filter((o) => o.canteen_id === canteenId)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        callback(filtered);
       }
-      callback(orders);
-    }, (error) => {
-      console.warn('Operator orders listener error:', error.message);
-      const filtered = localOrders.filter((o) => o.canteen_id === canteenId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      callback(filtered);
-    });
+    );
   } catch {
-    const filtered = localOrders.filter((o) => o.canteen_id === canteenId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const filtered = localOrders
+      .filter((o) => o.canteen_id === canteenId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     callback(filtered);
     return () => {};
   }
@@ -150,16 +201,24 @@ export function listenOperatorOrders(canteenId: string, callback: (orders: Order
 export function listenStudentOrders(userId: string, callback: (orders: Order[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'orders'), where('user_id', '==', userId), orderBy('created_at', 'desc'));
-    return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map((d) => d.data() as Order);
-      callback(orders);
-    }, (error) => {
-      console.warn('Student orders listener error:', error.message);
-      const filtered = localOrders.filter((o) => o.user_id === userId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
-      callback(filtered);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const orders = snapshot.docs.map((d) => d.data() as Order);
+        callback(orders);
+      },
+      (error) => {
+        console.warn('Student orders listener error:', error.message);
+        const filtered = localOrders
+          .filter((o) => o.user_id === userId)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        callback(filtered);
+      }
+    );
   } catch {
-    const filtered = localOrders.filter((o) => o.user_id === userId).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    const filtered = localOrders
+      .filter((o) => o.user_id === userId)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
     callback(filtered);
     return () => {};
   }
@@ -168,13 +227,17 @@ export function listenStudentOrders(userId: string, callback: (orders: Order[]) 
 export function listenAllOrders(callback: (orders: Order[]) => void): Unsubscribe {
   try {
     const q = query(collection(db, 'orders'), orderBy('created_at', 'desc'), limit(200));
-    return onSnapshot(q, (snapshot) => {
-      const orders = snapshot.docs.map((d) => d.data() as Order);
-      callback(orders);
-    }, (error) => {
-      console.warn('Admin orders listener error:', error.message);
-      callback([...localOrders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const orders = snapshot.docs.map((d) => d.data() as Order);
+        callback(orders);
+      },
+      (error) => {
+        console.warn('Admin orders listener error:', error.message);
+        callback([...localOrders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      }
+    );
   } catch {
     callback([...localOrders].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
     return () => {};
@@ -196,7 +259,11 @@ export async function recordPaymentHistory(payment: Omit<PaymentHistory, 'paymen
   localPaymentHistory.push(fullPayment);
 }
 
-export async function updateDailyRevenue(canteenId: string, amount: number, date: string = getISTDateString()): Promise<void> {
+export async function updateDailyRevenue(
+  canteenId: string,
+  amount: number,
+  date: string = getISTDateString()
+): Promise<void> {
   const safeAmount = Number(amount) || 0;
   const revenueId = `rev_${canteenId}_${date}`;
   try {
@@ -246,9 +313,10 @@ export async function createOrderInFirestore(orderInput: {
   const orderDocRef = doc(collection(db, 'orders'));
   const orderId = orderDocRef.id;
   const nowIso = new Date().toISOString();
-  const effectiveUserId = auth.currentUser?.uid || orderInput.user.user_id;
+  const effectiveUserId = orderInput.user.user_id || auth.currentUser?.uid || 'unknown_user';
 
-  const paymentStatus: PaymentStatus = orderInput.payment_method === 'online_demo' ? 'PAID_ONLINE_DEMO' : 'CASH_PENDING';
+  const paymentStatus: PaymentStatus =
+    orderInput.payment_method === 'online_demo' ? 'PAID_ONLINE_DEMO' : 'CASH_PENDING';
   const isScheduledPreorder = orderInput.order_type === 'preorder' && !!orderInput.scheduled_release_at;
 
   let allocatedToken = 1;
@@ -335,13 +403,16 @@ export async function createOrderInFirestore(orderInput: {
     type: 'order_placed',
   });
 
-  // Only notify operators immediately if not scheduled for a future time
   if (!isScheduledPreorder) {
     try {
       const operatorsSnap = await getDocs(query(collection(db, 'users'), where('role_id', '==', 'operator')));
       operatorsSnap.forEach((opDoc) => {
         const op = opDoc.data() as UserProfile;
-        if (!op.assigned_canteen_ids || op.assigned_canteen_ids.length === 0 || op.assigned_canteen_ids.includes(canteenId)) {
+        if (
+          !op.assigned_canteen_ids ||
+          op.assigned_canteen_ids.length === 0 ||
+          op.assigned_canteen_ids.includes(canteenId)
+        ) {
           createNotificationForUser(op.user_id, {
             order_id: orderId,
             title: `New Order: Token #${createdOrder.token_display}`,
@@ -356,19 +427,31 @@ export async function createOrderInFirestore(orderInput: {
   }
 
   await recordAuditLog({
-    actor_id: effectiveUserId, actor_name_snapshot: orderInput.user.name, actor_role: orderInput.user.role_id,
-    action: 'ORDER_CREATED', entity_type: 'order', entity_id: orderId, canteen_id: canteenId,
+    actor_id: effectiveUserId,
+    actor_name_snapshot: orderInput.user.name,
+    actor_role: orderInput.user.role_id,
+    action: 'ORDER_CREATED',
+    entity_type: 'order',
+    entity_id: orderId,
+    canteen_id: canteenId,
     description: `Order ${createdOrder.token_display} placed at ${orderInput.canteen.name} (${orderInput.order_type}, ${paymentStatus})`,
-    before_data: null, after_data: createdOrder as unknown as Record<string, unknown>,
+    before_data: null,
+    after_data: createdOrder as unknown as Record<string, unknown>,
   });
 
   return createdOrder;
 }
 
-export async function updateOrderStatusInFirestore(orderId: string, newStatus: OrderStatus, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function updateOrderStatusInFirestore(
+  orderId: string,
+  newStatus: OrderStatus,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   const nowIso = new Date().toISOString();
   const orderSnap = await getDoc(doc(db, 'orders', orderId));
-  const existingOrder = orderSnap.exists() ? (orderSnap.data() as Order) : localOrders.find((o) => o.order_id === orderId);
+  const existingOrder = orderSnap.exists()
+    ? (orderSnap.data() as Order)
+    : localOrders.find((o) => o.order_id === orderId);
 
   if (existingOrder) {
     if (newStatus === 'cancelled' && !['awaiting_acceptance', 'scheduled'].includes(existingOrder.order_status)) {
@@ -407,49 +490,77 @@ export async function updateOrderStatusInFirestore(orderId: string, newStatus: O
 
     if (newStatus === 'preparing') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Preparing Your Order',
-        body: `Your order #${tDisp} at ${cName} is now being prepared.`, type: 'order_preparing',
+        order_id: orderId,
+        title: 'Preparing Your Order',
+        body: `Your order #${tDisp} at ${cName} is now being prepared.`,
+        type: 'order_preparing',
       });
     } else if (newStatus === 'ready_for_pickup') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Ready for Pickup!',
-        body: `Your order #${tDisp} at ${cName} is ready! Please collect within 12 minutes.`, type: 'order_ready',
+        order_id: orderId,
+        title: 'Ready for Pickup!',
+        body: `Your order #${tDisp} at ${cName} is ready! Please collect within 12 minutes.`,
+        type: 'order_ready',
       });
     } else if (newStatus === 'picked_up') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Order Collected',
-        body: `Your order #${tDisp} from ${cName} was successfully collected.`, type: 'order_ready',
+        order_id: orderId,
+        title: 'Order Collected',
+        body: `Your order #${tDisp} from ${cName} was successfully collected.`,
+        type: 'order_ready',
       });
     } else if (newStatus === 'declined') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Order Declined',
-        body: `Your order #${tDisp} was declined by ${cName}.`, type: 'order_declined',
+        order_id: orderId,
+        title: 'Order Declined',
+        body: `Your order #${tDisp} was declined by ${cName}.`,
+        type: 'order_declined',
       });
     } else if (newStatus === 'cancelled') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Order Cancelled',
-        body: `Your order #${tDisp} has been cancelled.`, type: 'order_cancelled',
+        order_id: orderId,
+        title: 'Order Cancelled',
+        body: `Your order #${tDisp} has been cancelled.`,
+        type: 'order_cancelled',
       });
     } else if (newStatus === 'not_collected') {
       await createNotificationForUser(uId, {
-        order_id: orderId, title: 'Order Not Collected',
-        body: `Your order #${tDisp} from ${cName} was not collected in time and has expired.`, type: 'pickup_failed',
+        order_id: orderId,
+        title: 'Order Not Collected',
+        body: `Your order #${tDisp} from ${cName} was not collected in time and has expired.`,
+        type: 'pickup_failed',
       });
     }
   }
 
   await recordAuditLog({
-    actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role,
-    action: `ORDER_STATUS_${newStatus.toUpperCase()}`, entity_type: 'order', entity_id: orderId, canteen_id: existingOrder?.canteen_id || null,
-    description: `Order status updated to ${newStatus}`, before_data: existingOrder ? { status: existingOrder.order_status } : null, after_data: updates as unknown as Record<string, unknown>,
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: `ORDER_STATUS_${newStatus.toUpperCase()}`,
+    entity_type: 'order',
+    entity_id: orderId,
+    canteen_id: existingOrder?.canteen_id || null,
+    description: `Order status updated to ${newStatus}`,
+    before_data: existingOrder ? { status: existingOrder.order_status } : null,
+    after_data: updates as unknown as Record<string, unknown>,
   });
 }
 
-export async function markCashReceivedInFirestore(orderId: string, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function markCashReceivedInFirestore(
+  orderId: string,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   const nowIso = new Date().toISOString();
   const orderSnap = await getDoc(doc(db, 'orders', orderId));
-  const existingOrder = orderSnap.exists() ? (orderSnap.data() as Order) : localOrders.find((o) => o.order_id === orderId);
-  const updates: Partial<Order> = { payment_status: 'CASH_RECEIVED', cash_received_at: nowIso, updated_at: nowIso };
+  const existingOrder = orderSnap.exists()
+    ? (orderSnap.data() as Order)
+    : localOrders.find((o) => o.order_id === orderId);
+  const updates: Partial<Order> = {
+    payment_status: 'CASH_RECEIVED',
+    cash_received_at: nowIso,
+    updated_at: nowIso,
+  };
 
   await updateDoc(doc(db, 'orders', orderId), updates);
 
@@ -472,9 +583,16 @@ export async function markCashReceivedInFirestore(orderId: string, actor: { id: 
   }
 
   await recordAuditLog({
-    actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role,
-    action: 'PAYMENT_CASH_RECEIVED', entity_type: 'order', entity_id: orderId, canteen_id: existingOrder?.canteen_id || null,
-    description: `Cash received for order ${orderId}`, before_data: { payment_status: 'CASH_PENDING' }, after_data: { payment_status: 'CASH_RECEIVED' },
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'PAYMENT_CASH_RECEIVED',
+    entity_type: 'order',
+    entity_id: orderId,
+    canteen_id: existingOrder?.canteen_id || null,
+    description: `Cash received for order ${orderId}`,
+    before_data: { payment_status: 'CASH_PENDING' },
+    after_data: { payment_status: 'CASH_RECEIVED' },
   });
 }
 
@@ -508,7 +626,9 @@ export async function checkAndExpireOrders(canteenId?: string): Promise<number> 
 
     if (diffMs <= 0) {
       await updateOrderStatusInFirestore(order.order_id, 'not_collected', {
-        id: 'system', name: 'Automated Timer System', role: 'system',
+        id: 'system',
+        name: 'Automated Timer System',
+        role: 'system',
       });
       expiredCount++;
     }
@@ -520,7 +640,7 @@ export async function toggleFavouriteCanteen(userId: string, canteenId: string):
   try {
     const userRef = doc(db, 'users', userId);
     const snap = await getDoc(userRef);
-    let favs: string[] = snap.exists() ? ((snap.data() as UserProfile).favourite_canteen_ids || []) : [];
+    const favs: string[] = snap.exists() ? (snap.data() as UserProfile).favourite_canteen_ids || [] : [];
     const idx = favs.indexOf(canteenId);
     if (idx >= 0) favs.splice(idx, 1);
     else favs.push(canteenId);
@@ -531,65 +651,223 @@ export async function toggleFavouriteCanteen(userId: string, canteenId: string):
   }
 }
 
-export async function toggleMenuItemAvailability(itemId: string, isAvailable: boolean, actor: { id: string; name: string; role: string }): Promise<void> {
-  await updateDoc(doc(db, 'menuItems', itemId), { is_available: isAvailable, updated_at: new Date().toISOString() });
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: isAvailable ? 'MENU_ITEM_AVAILABLE' : 'MENU_ITEM_SOLDOUT', entity_type: 'menuItem', entity_id: itemId, canteen_id: null, description: `Menu item marked as ${isAvailable ? 'AVAILABLE' : 'SOLD OUT'}`, before_data: null, after_data: { is_available: isAvailable } });
+export async function toggleMenuItemAvailability(
+  itemId: string,
+  isAvailable: boolean,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
+  await updateDoc(doc(db, 'menuItems', itemId), {
+    is_available: isAvailable,
+    updated_at: new Date().toISOString(),
+  });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: isAvailable ? 'MENU_ITEM_AVAILABLE' : 'MENU_ITEM_SOLDOUT',
+    entity_type: 'menuItem',
+    entity_id: itemId,
+    canteen_id: null,
+    description: `Menu item marked as ${isAvailable ? 'AVAILABLE' : 'SOLD OUT'}`,
+    before_data: null,
+    after_data: { is_available: isAvailable },
+  });
 }
 
-export async function addMenuItemFirestore(item: MenuItem, actor: { id: string; name: string; role: string }): Promise<MenuItem> {
+export async function addMenuItemFirestore(
+  item: MenuItem,
+  actor: { id: string; name: string; role: string }
+): Promise<MenuItem> {
   await setDoc(doc(db, 'menuItems', item.menu_item_id), item);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'MENU_ITEM_CREATED', entity_type: 'menuItem', entity_id: item.menu_item_id, canteen_id: item.canteen_id, description: `Added menu item ${item.item_name}`, before_data: null, after_data: item as unknown as Record<string, unknown> });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'MENU_ITEM_CREATED',
+    entity_type: 'menuItem',
+    entity_id: item.menu_item_id,
+    canteen_id: item.canteen_id,
+    description: `Added menu item ${item.item_name}`,
+    before_data: null,
+    after_data: item as unknown as Record<string, unknown>,
+  });
   return item;
 }
 
-export async function editMenuItemFirestore(itemId: string, updates: Partial<MenuItem>, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function editMenuItemFirestore(
+  itemId: string,
+  updates: Partial<MenuItem>,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   const fullUpdates = { ...updates, updated_at: new Date().toISOString() };
   await updateDoc(doc(db, 'menuItems', itemId), fullUpdates);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'MENU_ITEM_UPDATED', entity_type: 'menuItem', entity_id: itemId, canteen_id: null, description: `Updated menu item`, before_data: null, after_data: fullUpdates });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'MENU_ITEM_UPDATED',
+    entity_type: 'menuItem',
+    entity_id: itemId,
+    canteen_id: null,
+    description: 'Updated menu item',
+    before_data: null,
+    after_data: fullUpdates,
+  });
 }
 
-export async function deleteMenuItemFirestore(itemId: string, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function deleteMenuItemFirestore(
+  itemId: string,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   await updateDoc(doc(db, 'menuItems', itemId), { is_active: false, updated_at: new Date().toISOString() });
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'MENU_ITEM_DEACTIVATED', entity_type: 'menuItem', entity_id: itemId, canteen_id: null, description: `Deactivated menu item`, before_data: null, after_data: { is_active: false } });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'MENU_ITEM_DEACTIVATED',
+    entity_type: 'menuItem',
+    entity_id: itemId,
+    canteen_id: null,
+    description: 'Deactivated menu item',
+    before_data: null,
+    after_data: { is_active: false },
+  });
 }
 
-export async function addCanteenFirestore(canteen: Canteen, actor: { id: string; name: string; role: string }): Promise<Canteen> {
+export async function addCanteenFirestore(
+  canteen: Canteen,
+  actor: { id: string; name: string; role: string }
+): Promise<Canteen> {
   await setDoc(doc(db, 'canteens', canteen.canteen_id), canteen);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'CANTEEN_CREATED', entity_type: 'canteen', entity_id: canteen.canteen_id, canteen_id: canteen.canteen_id, description: `Created canteen ${canteen.name}`, before_data: null, after_data: canteen as unknown as Record<string, unknown> });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'CANTEEN_CREATED',
+    entity_type: 'canteen',
+    entity_id: canteen.canteen_id,
+    canteen_id: canteen.canteen_id,
+    description: `Created canteen ${canteen.name}`,
+    before_data: null,
+    after_data: canteen as unknown as Record<string, unknown>,
+  });
   return canteen;
 }
 
-export async function editCanteenFirestore(canteenId: string, updates: Partial<Canteen>, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function editCanteenFirestore(
+  canteenId: string,
+  updates: Partial<Canteen>,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   const fullUpdates = { ...updates, updated_at: new Date().toISOString() };
   await updateDoc(doc(db, 'canteens', canteenId), fullUpdates);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'CANTEEN_UPDATED', entity_type: 'canteen', entity_id: canteenId, canteen_id: canteenId, description: `Updated canteen`, before_data: null, after_data: fullUpdates });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'CANTEEN_UPDATED',
+    entity_type: 'canteen',
+    entity_id: canteenId,
+    canteen_id: canteenId,
+    description: 'Updated canteen',
+    before_data: null,
+    after_data: fullUpdates,
+  });
 }
 
-export async function deleteCanteenFirestore(canteenId: string, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function deleteCanteenFirestore(
+  canteenId: string,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   await updateDoc(doc(db, 'canteens', canteenId), { is_active: false, updated_at: new Date().toISOString() });
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'CANTEEN_DEACTIVATED', entity_type: 'canteen', entity_id: canteenId, canteen_id: canteenId, description: `Deactivated canteen`, before_data: null, after_data: { is_active: false } });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'CANTEEN_DEACTIVATED',
+    entity_type: 'canteen',
+    entity_id: canteenId,
+    canteen_id: canteenId,
+    description: 'Deactivated canteen',
+    before_data: null,
+    after_data: { is_active: false },
+  });
 }
 
-export async function toggleCanteenStatus(canteenId: string, isOpen: boolean, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function toggleCanteenStatus(
+  canteenId: string,
+  isOpen: boolean,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   await updateDoc(doc(db, 'canteens', canteenId), { is_open: isOpen, updated_at: new Date().toISOString() });
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: isOpen ? 'CANTEEN_OPENED' : 'CANTEEN_CLOSED', entity_type: 'canteen', entity_id: canteenId, canteen_id: canteenId, description: `Canteen was ${isOpen ? 'OPENED' : 'CLOSED'}`, before_data: null, after_data: { is_open: isOpen } });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: isOpen ? 'CANTEEN_OPENED' : 'CANTEEN_CLOSED',
+    entity_type: 'canteen',
+    entity_id: canteenId,
+    canteen_id: canteenId,
+    description: `Canteen was ${isOpen ? 'OPENED' : 'CLOSED'}`,
+    before_data: null,
+    after_data: { is_open: isOpen },
+  });
 }
 
-export async function addCategoryFirestore(cat: MenuCategory, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function addCategoryFirestore(
+  cat: MenuCategory,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   await setDoc(doc(db, 'menuCategories', cat.menu_category_id), cat);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'CATEGORY_CREATED', entity_type: 'category', entity_id: cat.menu_category_id, canteen_id: null, description: `Created category ${cat.category_name}`, before_data: null, after_data: cat as unknown as Record<string, unknown> });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'CATEGORY_CREATED',
+    entity_type: 'category',
+    entity_id: cat.menu_category_id,
+    canteen_id: null,
+    description: `Created category ${cat.category_name}`,
+    before_data: null,
+    after_data: cat as unknown as Record<string, unknown>,
+  });
 }
 
-export async function updateUserProfileFirestore(userId: string, updates: Partial<UserProfile>, actor: { id: string; name: string; role: string }): Promise<void> {
+export async function updateUserProfileFirestore(
+  userId: string,
+  updates: Partial<UserProfile>,
+  actor: { id: string; name: string; role: string }
+): Promise<void> {
   const fullUpdates = { ...updates, updated_at: new Date().toISOString() };
   await updateDoc(doc(db, 'users', userId), fullUpdates);
-  await recordAuditLog({ actor_id: actor.id, actor_name_snapshot: actor.name, actor_role: actor.role, action: 'USER_UPDATED', entity_type: 'user', entity_id: userId, canteen_id: null, description: `Updated profile`, before_data: null, after_data: fullUpdates });
+  await recordAuditLog({
+    actor_id: actor.id,
+    actor_name_snapshot: actor.name,
+    actor_role: actor.role,
+    action: 'USER_UPDATED',
+    entity_type: 'user',
+    entity_id: userId,
+    canteen_id: null,
+    description: 'Updated profile',
+    before_data: null,
+    after_data: fullUpdates,
+  });
 }
 
-export async function recordAuditLog(log: Omit<AuditLog, 'audit_log_id' | 'timestamp' | 'source'>): Promise<void> {
+export async function recordAuditLog(
+  log: Omit<AuditLog, 'audit_log_id' | 'timestamp' | 'source'>
+): Promise<void> {
   const logId = `log_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  const fullLog: AuditLog = { ...log, audit_log_id: logId, actor_id: auth.currentUser?.uid || log.actor_id, timestamp: new Date().toISOString(), source: 'client' };
-  try { await setDoc(doc(db, 'auditLogs', logId), fullLog); } catch {}
+  const fullLog: AuditLog = {
+    ...log,
+    audit_log_id: logId,
+    actor_id: log.actor_id || auth.currentUser?.uid || 'system',
+    timestamp: new Date().toISOString(),
+    source: 'client',
+  };
+  try {
+    await setDoc(doc(db, 'auditLogs', logId), fullLog);
+  } catch {}
 }
 
 export async function fetchAuditLogs(): Promise<AuditLog[]> {
@@ -600,80 +878,134 @@ export async function fetchAuditLogs(): Promise<AuditLog[]> {
   return [];
 }
 
-export function listenRevenueForCanteen(canteenId: string, callback: (revenues: Revenue[]) => void): Unsubscribe {
+export function listenRevenueForCanteen(
+  canteenId: string,
+  callback: (revenues: Revenue[]) => void
+): Unsubscribe {
   try {
     const q = query(collection(db, 'revenue'), where('canteen_id', '==', canteenId));
-    return onSnapshot(q, (snapshot) => {
-      const revenues = snapshot.docs.map((d) => {
-        const raw = d.data() as Partial<Revenue>;
-        return {
-          revenue_id: raw.revenue_id || d.id,
-          canteen_id: raw.canteen_id || canteenId,
-          date: raw.date || getISTDateString(),
-          total_orders: Number(raw.total_orders) || 0,
-          total_revenue: Number(raw.total_revenue) || 0,
-          updated_at: raw.updated_at || new Date().toISOString(),
-        };
-      });
-      revenues.sort((a, b) => b.date.localeCompare(a.date));
-      localRevenue = revenues;
-      callback(revenues);
-    }, (error) => {
-      console.warn('Revenue listener error:', error.message);
-      callback([]);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const revenues = snapshot.docs.map((d) => {
+          const raw = d.data() as Partial<Revenue>;
+          return {
+            revenue_id: raw.revenue_id || d.id,
+            canteen_id: raw.canteen_id || canteenId,
+            date: raw.date || getISTDateString(),
+            total_orders: Number(raw.total_orders) || 0,
+            total_revenue: Number(raw.total_revenue) || 0,
+            updated_at: raw.updated_at || new Date().toISOString(),
+          };
+        });
+        revenues.sort((a, b) => b.date.localeCompare(a.date));
+        localRevenue = revenues;
+        callback(revenues);
+      },
+      (error) => {
+        console.warn('Revenue listener error:', error.message);
+        callback([]);
+      }
+    );
   } catch {
     callback([]);
     return () => {};
   }
 }
 
-export function listenPaymentHistory(userId: string | null, callback: (payments: PaymentHistory[]) => void): Unsubscribe {
+export function listenPaymentHistory(
+  userId: string | null,
+  callback: (payments: PaymentHistory[]) => void
+): Unsubscribe {
   try {
     const coll = collection(db, 'payment_history');
     const q = userId ? query(coll, where('user_id', '==', userId)) : query(coll, limit(200));
-    return onSnapshot(q, (snapshot) => {
-      const payments = snapshot.docs.map((d) => {
-        const raw = d.data() as Partial<PaymentHistory>;
-        return {
-          ...raw,
-          payment_id: raw.payment_id || d.id,
-          price: Number(raw.price) || 0,
-        } as PaymentHistory;
-      });
-      payments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      callback(payments);
-    }, (error) => {
-      console.warn('Payment history listener error:', error.message);
-      callback([]);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const payments = snapshot.docs.map((d) => {
+          const raw = d.data() as Partial<PaymentHistory>;
+          return {
+            ...raw,
+            payment_id: raw.payment_id || d.id,
+            price: Number(raw.price) || 0,
+          } as PaymentHistory;
+        });
+        payments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        callback(payments);
+      },
+      (error) => {
+        console.warn('Payment history listener error:', error.message);
+        callback([]);
+      }
+    );
   } catch {
     callback([]);
     return () => {};
   }
 }
 
-export function listenCanteenPaymentHistory(canteenId: string, callback: (payments: PaymentHistory[]) => void): Unsubscribe {
+export function listenCanteenPaymentHistory(
+  canteenId: string,
+  callback: (payments: PaymentHistory[]) => void
+): Unsubscribe {
   try {
     const q = query(collection(db, 'payment_history'), where('canteen_id', '==', canteenId));
-    return onSnapshot(q, (snapshot) => {
-      const payments = snapshot.docs.map((d) => {
-        const raw = d.data() as Partial<PaymentHistory>;
-        return {
-          ...raw,
-          payment_id: raw.payment_id || d.id,
-          price: Number(raw.price) || 0,
-        } as PaymentHistory;
-      });
-      payments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      callback(payments);
-    }, (error) => {
-      console.warn('Canteen payment history listener error:', error.message);
-      callback([]);
-    });
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        const payments = snapshot.docs.map((d) => {
+          const raw = d.data() as Partial<PaymentHistory>;
+          return {
+            ...raw,
+            payment_id: raw.payment_id || d.id,
+            price: Number(raw.price) || 0,
+          } as PaymentHistory;
+        });
+        payments.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+        callback(payments);
+      },
+      (error) => {
+        console.warn('Canteen payment history listener error:', error.message);
+        callback([]);
+      }
+    );
   } catch {
     callback([]);
     return () => {};
+  }
+}
+
+export async function sendPushToUser(
+  userId: string,
+  title: string,
+  body: string,
+  data: Record<string, unknown> = {}
+): Promise<void> {
+  try {
+    const userSnap = await getDoc(doc(db, 'users', userId));
+    const pushToken = userSnap.exists() ? (userSnap.data() as any)?.expo_push_token : null;
+    if (!pushToken) return;
+
+    await fetch('https://exp.host/--/api/v2/push/send', {
+      method: 'POST',
+      headers: {
+        Accept: 'application/json',
+        'Accept-encoding': 'gzip, deflate',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        to: pushToken,
+        sound: 'default',
+        title,
+        body,
+        data,
+        channelId: 'mu-canteen-orders',
+        priority: 'high',
+      }),
+    });
+  } catch (err) {
+    console.warn('Remote push send notice:', err);
   }
 }
 
@@ -704,17 +1036,30 @@ export async function createNotificationForUser(
     order_id: data.order_id,
     type: data.type,
   }).catch(() => {});
+
   return notif;
 }
 
-export function listenUserNotifications(userId: string, callback: (notifs: AppNotification[]) => void): Unsubscribe {
+export function listenUserNotifications(
+  userId: string,
+  callback: (notifs: AppNotification[]) => void
+): Unsubscribe {
   try {
-    const q = query(collection(db, 'notifications'), where('user_id', '==', userId), orderBy('created_at', 'desc'), limit(50));
-    return onSnapshot(q, (snapshot) => {
-      callback(snapshot.docs.map((d) => d.data() as AppNotification));
-    }, () => {
-      callback(localNotifications.filter((n) => n.user_id === userId));
-    });
+    const q = query(
+      collection(db, 'notifications'),
+      where('user_id', '==', userId),
+      orderBy('created_at', 'desc'),
+      limit(50)
+    );
+    return onSnapshot(
+      q,
+      (snapshot) => {
+        callback(snapshot.docs.map((d) => d.data() as AppNotification));
+      },
+      () => {
+        callback(localNotifications.filter((n) => n.user_id === userId));
+      }
+    );
   } catch {
     callback(localNotifications.filter((n) => n.user_id === userId));
     return () => {};
@@ -722,7 +1067,9 @@ export function listenUserNotifications(userId: string, callback: (notifs: AppNo
 }
 
 export async function markNotificationRead(notificationId: string): Promise<void> {
-  try { await updateDoc(doc(db, 'notifications', notificationId), { is_read: true }); } catch {}
+  try {
+    await updateDoc(doc(db, 'notifications', notificationId), { is_read: true });
+  } catch {}
 }
 
 export async function markAllNotificationsRead(userId: string): Promise<void> {
@@ -751,6 +1098,11 @@ export async function getUserNotificationSettings(userId: string): Promise<Notif
   return defaultSettings;
 }
 
-export async function updateUserNotificationSettings(userId: string, settings: NotificationSettings): Promise<void> {
-  try { await setDoc(doc(db, 'notification_settings', userId), settings, { merge: true }); } catch {}
+export async function updateUserNotificationSettings(
+  userId: string,
+  settings: NotificationSettings
+): Promise<void> {
+  try {
+    await setDoc(doc(db, 'notification_settings', userId), settings, { merge: true });
+  } catch {}
 }

@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ToastProvider } from './src/context/ToastContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { CartProvider } from './src/context/CartContext';
 import { NotificationProvider } from './src/context/NotificationContext';
@@ -16,14 +17,16 @@ export default function App() {
 
   return (
     <SafeAreaProvider>
-      <AuthProvider>
-        <NotificationProvider>
-          <CartProvider>
-            <StatusBar style="dark" />
-            <RootNavigator />
-          </CartProvider>
-        </NotificationProvider>
-      </AuthProvider>
+      <ToastProvider>
+        <AuthProvider>
+          <NotificationProvider>
+            <CartProvider>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </CartProvider>
+          </NotificationProvider>
+        </AuthProvider>
+      </ToastProvider>
     </SafeAreaProvider>
   );
 }

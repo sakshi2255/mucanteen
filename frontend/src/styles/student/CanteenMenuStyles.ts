@@ -2,7 +2,10 @@ import { StyleSheet } from 'react-native';
 import { colors, typography, spacing, borderRadius, shadows } from '../../config/theme';
 
 export const styles = StyleSheet.create({
-  safeArea: { flex: 1, backgroundColor: colors.surface },
+  safeArea: {
+    flex: 1,
+    backgroundColor: colors.surface,
+  },
   topNav: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -13,7 +16,9 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
     backgroundColor: colors.surface,
   },
-  backButton: { padding: 4 },
+  backButton: {
+    padding: 4,
+  },
   navTitle: {
     flex: 1,
     fontSize: 16,
@@ -21,7 +26,10 @@ export const styles = StyleSheet.create({
     color: colors.textPrimary,
     marginHorizontal: spacing.sm,
   },
-  cartIconWrapper: { position: 'relative', padding: 6 },
+  cartIconWrapper: {
+    position: 'relative',
+    padding: 6,
+  },
   cartBadge: {
     position: 'absolute',
     top: 2,
@@ -34,9 +42,23 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 3,
   },
-  cartBadgeText: { color: '#FFFFFF', fontSize: 9, fontWeight: '700' },
-  container: { flex: 1, backgroundColor: colors.backgroundSoft },
-  scrollContent: { paddingBottom: 130 },
+  cartBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 9,
+    fontWeight: '700',
+  },
+  container: {
+    flex: 1,
+    backgroundColor: colors.backgroundSoft,
+  },
+  scrollContent: {
+    paddingBottom: 90,
+  },
+  canteenBannerImage: {
+    width: '100%',
+    height: 145,
+    backgroundColor: colors.backgroundSoft,
+  },
   canteenHeaderCard: {
     backgroundColor: colors.surface,
     padding: spacing.lg,
@@ -44,19 +66,62 @@ export const styles = StyleSheet.create({
     borderBottomColor: colors.borderLight,
     gap: 6,
   },
-  canteenTitleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  canteenTitleCol: { flex: 1 },
-  canteenName: { fontSize: 20, fontWeight: typography.fontWeights.heavy, color: colors.primaryDark },
-  tokenPrefixNote: { fontSize: 12, color: colors.primary, fontWeight: typography.fontWeights.bold, marginTop: 2 },
-  statusPill: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: borderRadius.sm },
-  openPill: { backgroundColor: '#ECFDF5' },
-  closedPill: { backgroundColor: '#FEF2F2' },
-  statusPillText: { fontSize: 11, fontWeight: '800' },
-  openText: { color: colors.accentGreen },
-  closedText: { color: colors.accentRed },
-  metaRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  metaText: { fontSize: 13, color: colors.textSecondary, fontWeight: '500' },
-  searchSection: { paddingHorizontal: spacing.lg, paddingTop: spacing.md, paddingBottom: spacing.xs, backgroundColor: colors.surface },
+  canteenTitleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  canteenTitleCol: {
+    flex: 1,
+  },
+  canteenName: {
+    fontSize: 20,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.primaryDark,
+  },
+  tokenPrefixNote: {
+    fontSize: 12,
+    color: colors.primary,
+    fontWeight: typography.fontWeights.bold,
+    marginTop: 2,
+  },
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: borderRadius.sm,
+  },
+  openPill: {
+    backgroundColor: '#ECFDF5',
+  },
+  closedPill: {
+    backgroundColor: '#FEF2F2',
+  },
+  statusPillText: {
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  openText: {
+    color: colors.accentGreen,
+  },
+  closedText: {
+    color: colors.accentRed,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  metaText: {
+    fontSize: 13,
+    color: colors.textSecondary,
+    fontWeight: '500',
+  },
+  searchSection: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.md,
+    paddingBottom: spacing.xs,
+    backgroundColor: colors.surface,
+  },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -67,8 +132,14 @@ export const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.borderLight,
   },
-  searchIcon: { marginRight: 8 },
-  searchInput: { flex: 1, fontSize: 14, color: colors.textPrimary },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: colors.textPrimary,
+  },
   singleFilterBar: {
     backgroundColor: colors.surface,
     borderBottomWidth: 1,
@@ -96,11 +167,32 @@ export const styles = StyleSheet.create({
     backgroundColor: colors.accentGreen,
     borderColor: colors.accentGreen,
   },
-  categoryPillText: { fontSize: 12, fontWeight: '700', color: colors.textSecondary },
-  activeCategoryPillText: { color: '#FFFFFF' },
-  section: { marginTop: spacing.md, backgroundColor: colors.surface, paddingVertical: spacing.sm },
-  sectionTitleRow: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: spacing.lg, marginBottom: spacing.sm, gap: 8 },
-  sectionTitle: { fontSize: 15, fontWeight: typography.fontWeights.heavy, color: colors.textPrimary, letterSpacing: 0.5 },
+  categoryPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: colors.textSecondary,
+  },
+  activeCategoryPillText: {
+    color: '#FFFFFF',
+  },
+  section: {
+    marginTop: spacing.md,
+    backgroundColor: colors.surface,
+    paddingVertical: spacing.sm,
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    marginBottom: spacing.sm,
+    gap: 8,
+  },
+  sectionTitle: {
+    fontSize: 15,
+    fontWeight: typography.fontWeights.heavy,
+    color: colors.textPrimary,
+    letterSpacing: 0.5,
+  },
   gridContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -114,8 +206,15 @@ export const styles = StyleSheet.create({
   uniformFoodCard: {
     height: 235,
   },
-  emptyContainer: { padding: spacing.xl, alignItems: 'center' },
-  emptyTitle: { fontSize: 16, fontWeight: typography.fontWeights.bold, color: colors.textPrimary },
+  emptyContainer: {
+    padding: spacing.xl,
+    alignItems: 'center',
+  },
+  emptyTitle: {
+    fontSize: 16,
+    fontWeight: typography.fontWeights.bold,
+    color: colors.textPrimary,
+  },
   floatingMenuBtn: {
     position: 'absolute',
     right: spacing.lg,
@@ -139,11 +238,12 @@ export const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.heavy,
     letterSpacing: 0.6,
   },
+  bottomDock: {
+    backgroundColor: colors.backgroundSoft,
+  },
   stickyCartBar: {
-    position: 'absolute',
-    bottom: spacing.lg,
-    left: spacing.lg,
-    right: spacing.lg,
+    marginHorizontal: 12,
+    marginVertical: 8,
     backgroundColor: colors.primaryDark,
     borderRadius: borderRadius.lg,
     paddingHorizontal: spacing.lg,
@@ -152,10 +252,17 @@ export const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     ...shadows.lg,
-    zIndex: 15,
   },
-  cartBarCount: { fontSize: 11, color: 'rgba(255, 255, 255, 0.8)', fontWeight: '700' },
-  cartBarTotal: { fontSize: 18, fontWeight: typography.fontWeights.heavy, color: '#FFFFFF' },
+  cartBarCount: {
+    fontSize: 11,
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontWeight: '700',
+  },
+  cartBarTotal: {
+    fontSize: 18,
+    fontWeight: typography.fontWeights.heavy,
+    color: '#FFFFFF',
+  },
   cartBarButton: {
     backgroundColor: colors.accentOrange,
     flexDirection: 'row',
@@ -165,5 +272,9 @@ export const styles = StyleSheet.create({
     borderRadius: borderRadius.md,
     gap: 6,
   },
-  cartBarButtonText: { color: '#FFFFFF', fontWeight: typography.fontWeights.heavy, fontSize: 13 },
+  cartBarButtonText: {
+    color: '#FFFFFF',
+    fontWeight: typography.fontWeights.heavy,
+    fontSize: 13,
+  },
 });

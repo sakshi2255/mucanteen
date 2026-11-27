@@ -2,160 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions
-    function isAuthenticated() {
-      return request.auth != null;
-    }
-
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    function isRole(role) {
-      return isAuthenticated() && getUserData().role_id == role;
-    }
-
-    function isAdmin() {
-      return isRole('admin');
-    }
-
-    function isOperator() {
-      return isRole('operator');
-    }
-
-    function isOperatorForCanteen(canteenId) {
-      return isAuthenticated() && 
-        (isAdmin() || (isOperator() && canteenId in getUserData().assigned_canteen_ids));
-    }
-
-    function isOwner(userId) {
-      return isAuthenticated() && request.auth.uid == userId;
-    }
-
-    // Users collection
     match /users/{userId} {
-      allow read: if isAuthenticated();
-      allow create: if isAuthenticated() && request.auth.uid == userId;
-      allow update: if isAuthenticated() && (
-        isAdmin() || 
-        (request.auth.uid == userId && 
-         // Prevent non-admin users from escalating their own role or changing assigned canteens
-         request.resource.data.role_id == resource.data.role_id &&
-         request.resource.data.assigned_canteen_ids == resource.data.assigned_canteen_ids)
-      );
-      allow delete: if isAdmin();
-    }
-
-    // Roles collection
-    match /roles/{roleId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    // Buildings collection
-    match /buildings/{buildingId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    // Canteens collection
-    match /canteens/{canteenId} {
-      allow read: if isAuthenticated();
-      allow update: if isOperatorForCanteen(canteenId) || isAdmin();
-      allow create, delete: if isAdmin();
-    }
-
-    // Menu Categories collection
-    match /menuCategories/{categoryId} {
-      allow read: if isAuthenticated();
-      allow write: if isAdmin();
-    }
-
-    // Menu Items collection
-    match /menuItems/{itemId} {
-      allow read: if isAuthenticated();
-      allow update: if (
-        isAdmin() || 
-        (isOperator() && isOperatorForCanteen(resource.data.canteen_id))
-      );
-      allow create, delete: if isAdmin();
-    }
-
-    // Orders collection — SHARED MULTI-DEVICE ORDER QUEUE
-    match /orders/{orderId} {
-      // Students read only their own orders
-      // Operators read all orders placed at their assigned canteen
-      // Admins read all orders
-      allow read: if isAuthenticated() && (
-        resource.data.user_id == request.auth.uid ||
-        isOperatorForCanteen(resource.data.canteen_id) ||
-        isAdmin()
-      );
-
-      // Order creation
-      allow create: if isAuthenticated() && 
-        request.resource.data.user_id == request.auth.uid;
-
-      // Status updates
-      allow update: if isAuthenticated() && (
-        isAdmin() ||
-        isOperatorForCanteen(resource.data.canteen_id) ||
-        (resource.data.user_id == request.auth.uid && 
-         request.resource.data.order_status == 'cancelled' && 
-         resource.data.order_status == 'awaiting_acceptance')
-      );
-
-      allow delete: if isAdmin();
-    }
-
-    // Order Counters collection
-    match /orderCounters/{canteenId} {
-      allow read: if isAuthenticated();
-      allow write: if isAuthenticated();
-    }
-
-    // Audit Logs — Append-only, privileged read
-    match /auditLogs/{logId} {
-      allow read: if isAdmin();
-      allow create: if isAuthenticated();
-      allow update, delete: if false; // strictly immutable and append-only
-    }
-
-    // Daily Revenue collection (supports Revenue, revenue, dailyRevenue)
-    match /Revenue/{revenueId} {
       allow read, write: if true;
     }
+
+    match /roles/{roleId} {
+      allow read, write: if true;
+    }
+
+    match /buildings/{buildingId} {
+      allow read, write: if true;
+    }
+
+    match /canteens/{canteenId} {
+      allow read, write: if true;
+    }
+
+    match /menuCategories/{categoryId} {
+      allow read, write: if true;
+    }
+
+    match /menuItems/{itemId} {
+      allow read, write: if true;
+    }
+
+    match /orders/{orderId} {
+      allow read, write: if true;
+    }
+
+    match /orderCounters/{canteenId} {
+      allow read, write: if true;
+    }
+
+    match /auditLogs/{logId} {
+      allow read, create: if true;
+      allow update, delete: if false;
+    }
+
     match /revenue/{revenueId} {
       allow read, write: if true;
     }
-    match /dailyRevenue/{revenueId} {
-      allow read, write: if true;
-    }
 
-    // Payments History collection (supports payments_history, payment_history, paymentsHistory)
-    match /payments_history/{paymentId} {
-      allow read, write: if true;
-    }
     match /payment_history/{paymentId} {
       allow read, write: if true;
     }
-    match /paymentsHistory/{paymentId} {
-      allow read, write: if true;
-    }
 
-    // Notifications
     match /notifications/{notifId} {
       allow read, write: if true;
     }
-    match /user_notification_settings/{userId} {
+
+    match /notification_settings/{userId} {
       allow read, write: if true;
     }
 
-    // Promotions
     match /promotions/{promoId} {
-      allow read: if true;
-      allow write: if isAuthenticated();
+      allow read, write: if true;
     }
   }
 }
-

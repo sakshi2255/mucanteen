@@ -1,20 +1,25 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ArrowLeft, Search, ShoppingBag, MapPin, Flame, UtensilsCrossed } from 'lucide-react-native';
+import { ArrowLeft, Search, ShoppingBag, MapPin, Flame } from 'lucide-react-native';
 import { colors } from '../../config/theme';
 import { FoodCard } from '../../components/common/FoodCard';
 import { FloatingCategoryModal } from '../../components/common/FloatingCategoryModal';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import { listenMenuItems, listenCategories } from '../../services/firestoreService';
 import { styles } from '../../styles/student/CanteenMenuStyles';
 import type { Canteen, MenuCategory, MenuItem } from '../../models/types';
 
-interface CanteenMenuScreenProps { navigation: any; route?: any; }
+interface CanteenMenuScreenProps {
+  navigation: any;
+  route?: any;
+}
 
 export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, navigation }) => {
   const canteen: Canteen = route?.params?.canteen;
   const { items: cartItems, subtotal, itemCount, addToCart, removeFromCart } = useCart();
+  const { showToast } = useToast();
 
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [categories, setCategories] = useState<MenuCategory[]>([]);
@@ -38,7 +43,9 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
     const counts: Record<string, number> = { all: menuItems.length };
     for (const cat of categories) {
       if (cat.menu_category_id !== 'all') {
-        counts[cat.menu_category_id] = menuItems.filter((i) => i.menu_category_id === cat.menu_category_id).length;
+        counts[cat.menu_category_id] = menuItems.filter(
+          (i) => i.menu_category_id === cat.menu_category_id
+        ).length;
       }
     }
     return counts;
@@ -48,7 +55,14 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
     return menuItems.filter((item) => {
       if (search.trim()) {
         const q = search.toLowerCase();
-        if (!(item.item_name.toLowerCase().includes(q) || item.description.toLowerCase().includes(q))) return false;
+        if (
+          !(
+            item.item_name.toLowerCase().includes(q) ||
+            item.description.toLowerCase().includes(q)
+          )
+        ) {
+          return false;
+        }
       }
       if (selectedCategory !== 'all' && item.menu_category_id !== selectedCategory) return false;
       if (pureVegOnly && !item.is_veg) return false;
@@ -57,7 +71,17 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
     });
   }, [menuItems, search, selectedCategory, pureVegOnly, availableNowOnly]);
 
-  const getCartQuantity = (itemId: string) => cartItems.find((i) => i.item.menu_item_id === itemId)?.quantity || 0;
+  const getCartQuantity = (itemId: string) =>
+    cartItems.find((i) => i.item.menu_item_id === itemId)?.quantity || 0;
+
+  const handleAddItem = (item: MenuItem) => {
+    if (!canteen.is_open) {
+      showToast('This canteen is currently closed for orders.', 'error', 'Canteen Closed');
+      return;
+    }
+    addToCart(item, canteen.name);
+    showToast(`Added ${item.item_name} to cart.`, 'success', 'Cart Updated');
+  };
 
   if (!canteen) return null;
 
@@ -67,22 +91,50 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
         <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backButton}>
           <ArrowLeft size={26} color={colors.textPrimary} />
         </TouchableOpacity>
-        <Text style={styles.navTitle} numberOfLines={1}>{canteen.name}</Text>
-        <TouchableOpacity style={styles.cartIconWrapper} onPress={() => navigation.navigate('StudentRoot', { screen: 'Cart' })}>
+        <Text style={styles.navTitle} numberOfLines={1}>
+          {canteen.name}
+        </Text>
+        <TouchableOpacity
+          style={styles.cartIconWrapper}
+          onPress={() => navigation.navigate('StudentRoot', { screen: 'Cart' })}
+        >
           <ShoppingBag size={22} color={colors.textPrimary} />
-          {itemCount > 0 && <View style={styles.cartBadge}><Text style={styles.cartBadgeText}>{itemCount}</Text></View>}
+          {itemCount > 0 && (
+            <View style={styles.cartBadge}>
+              <Text style={styles.cartBadgeText}>{itemCount}</Text>
+            </View>
+          )}
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+      >
+        {!!canteen.banner_url && (
+          <Image
+            source={{ uri: canteen.banner_url }}
+            style={styles.canteenBannerImage}
+            resizeMode="cover"
+          />
+        )}
+
         <View style={styles.canteenHeaderCard}>
           <View style={styles.canteenTitleRow}>
             <View style={styles.canteenTitleCol}>
               <Text style={styles.canteenName}>{canteen.name}</Text>
-              <Text style={styles.tokenPrefixNote}>Prefix [{canteen.token_prefix || 'A'}] • Floor {canteen.floor}</Text>
+              <Text style={styles.tokenPrefixNote}>
+                Prefix [{canteen.token_prefix || 'A'}] • Floor {canteen.floor}
+              </Text>
             </View>
             <View style={[styles.statusPill, canteen.is_open ? styles.openPill : styles.closedPill]}>
-              <Text style={[styles.statusPillText, canteen.is_open ? styles.openText : styles.closedText]}>
+              <Text
+                style={[
+                  styles.statusPillText,
+                  canteen.is_open ? styles.openText : styles.closedText,
+                ]}
+              >
                 {canteen.is_open ? 'OPEN' : 'CLOSED'}
               </Text>
             </View>
@@ -90,7 +142,12 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
           <View style={styles.metaRow}>
             <MapPin size={14} color={colors.textSecondary} />
             <Text style={styles.metaText}>
-              Floor {canteen.floor === 0 ? 'Ground' : canteen.floor} • {canteen.building_id.includes('law') ? 'Law Building' : 'Main Academic Building'}
+              Floor {canteen.floor === 0 ? 'Ground' : canteen.floor} •{' '}
+              {canteen.building_id.includes('law')
+                ? 'Law Building'
+                : canteen.building_id.includes('hostel')
+                  ? 'Hostel Block'
+                  : 'Main Academic Building'}
             </Text>
           </View>
         </View>
@@ -108,15 +165,20 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
           </View>
         </View>
 
-        {/* Single Horizontal Filter & Category Bar */}
         <View style={styles.singleFilterBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.categoryScroll}
+          >
             <TouchableOpacity
               style={[styles.categoryPill, pureVegOnly && styles.vegActivePill]}
               onPress={() => setPureVegOnly(!pureVegOnly)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.categoryPillText, pureVegOnly && styles.activeCategoryPillText]}>Pure Veg</Text>
+              <Text style={[styles.categoryPillText, pureVegOnly && styles.activeCategoryPillText]}>
+                Pure Veg
+              </Text>
             </TouchableOpacity>
 
             <TouchableOpacity
@@ -124,17 +186,29 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
               onPress={() => setAvailableNowOnly(!availableNowOnly)}
               activeOpacity={0.7}
             >
-              <Text style={[styles.categoryPillText, availableNowOnly && styles.activeCategoryPillText]}>Available</Text>
+              <Text
+                style={[styles.categoryPillText, availableNowOnly && styles.activeCategoryPillText]}
+              >
+                Available
+              </Text>
             </TouchableOpacity>
 
             {categories.map((cat) => (
               <TouchableOpacity
                 key={cat.menu_category_id}
-                style={[styles.categoryPill, selectedCategory === cat.menu_category_id && styles.activeCategoryPill]}
+                style={[
+                  styles.categoryPill,
+                  selectedCategory === cat.menu_category_id && styles.activeCategoryPill,
+                ]}
                 onPress={() => setSelectedCategory(cat.menu_category_id)}
                 activeOpacity={0.7}
               >
-                <Text style={[styles.categoryPillText, selectedCategory === cat.menu_category_id && styles.activeCategoryPillText]}>
+                <Text
+                  style={[
+                    styles.categoryPillText,
+                    selectedCategory === cat.menu_category_id && styles.activeCategoryPillText,
+                  ]}
+                >
                   {cat.category_name}
                 </Text>
               </TouchableOpacity>
@@ -159,7 +233,7 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
                   <FoodCard
                     item={item}
                     quantityInCart={getCartQuantity(item.menu_item_id)}
-                    onAddToCart={(i) => addToCart(i, canteen.name)}
+                    onAddToCart={handleAddItem}
                     onRemoveFromCart={removeFromCart}
                     style={styles.uniformFoodCard}
                   />
@@ -170,17 +244,7 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
         </View>
       </ScrollView>
 
-      {/* Swiggy-style Floating MENU Button */}
-      <TouchableOpacity
-        style={[styles.floatingMenuBtn, itemCount > 0 && styles.floatingMenuBtnWithCart]}
-        onPress={() => setModalVisible(true)}
-        activeOpacity={0.85}
-      >
-        <UtensilsCrossed size={16} color="#FFFFFF" />
-        <Text style={styles.floatingMenuBtnText}>MENU</Text>
-      </TouchableOpacity>
-
-     <FloatingCategoryModal
+      <FloatingCategoryModal
         visible={modalVisible}
         onToggleVisible={() => setModalVisible((prev) => !prev)}
         categories={categories}
@@ -190,19 +254,21 @@ export const CanteenMenuScreen: React.FC<CanteenMenuScreenProps> = ({ route, nav
       />
 
       {itemCount > 0 && (
-        <View style={styles.stickyCartBar}>
-          <View>
-            <Text style={styles.cartBarCount}>{itemCount} ITEMS</Text>
-            <Text style={styles.cartBarTotal}>₹{subtotal}</Text>
+        <View style={styles.bottomDock}>
+          <View style={styles.stickyCartBar}>
+            <View>
+              <Text style={styles.cartBarCount}>{itemCount} ITEMS</Text>
+              <Text style={styles.cartBarTotal}>₹{subtotal}</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.cartBarButton}
+              onPress={() => navigation.navigate('StudentRoot', { screen: 'Cart' })}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.cartBarButtonText}>VIEW CART</Text>
+              <ShoppingBag size={16} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity
-            style={styles.cartBarButton}
-            onPress={() => navigation.navigate('StudentRoot', { screen: 'Cart' })}
-            activeOpacity={0.85}
-          >
-            <Text style={styles.cartBarButtonText}>VIEW CART</Text>
-            <ShoppingBag size={16} color="#FFFFFF" />
-          </TouchableOpacity>
         </View>
       )}
     </SafeAreaView>

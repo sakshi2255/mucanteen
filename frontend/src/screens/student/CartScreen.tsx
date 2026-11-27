@@ -1,18 +1,38 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, ActivityIndicator, Alert, TextInput } from 'react-native';
+import {
+  View,
+  Text,
+  ScrollView,
+  TouchableOpacity,
+  ActivityIndicator,
+  TextInput,
+} from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import {
-  ArrowLeft, Trash2, Plus, Minus, Clock, Zap, ShoppingBag, Check, CreditCard, Banknote, Calendar,
+  ArrowLeft,
+  Trash2,
+  Plus,
+  Minus,
+  Clock,
+  Zap,
+  ShoppingBag,
+  Check,
+  CreditCard,
+  Banknote,
+  Calendar,
 } from 'lucide-react-native';
 import { colors } from '../../config/theme';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
+import { useToast } from '../../context/ToastContext';
 import { createOrderInFirestore, listenCanteens } from '../../services/firestoreService';
 import { getISTDateString } from '../../services/tokenService';
 import { styles } from '../../styles/student/CartStyles';
 import type { Canteen } from '../../models/types';
 
-interface CartScreenProps { navigation: any; }
+interface CartScreenProps {
+  navigation: any;
+}
 
 const PREORDER_SLOTS = [
   '10:30 AM (Morning Recess)',
@@ -38,11 +58,23 @@ function parseScheduledIsoForToday(timeStr: string): string | null {
 
 export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const {
-    items, activeCanteenId, activeCanteenName, subtotal, total,
-    orderType, setOrderType, pickupTime, setPickupTime,
-    paymentMethod, setPaymentMethod, policyAccepted,
-    addToCart, removeFromCart, clearCart,
+    items,
+    activeCanteenId,
+    activeCanteenName,
+    subtotal,
+    total,
+    orderType,
+    setOrderType,
+    pickupTime,
+    setPickupTime,
+    paymentMethod,
+    setPaymentMethod,
+    policyAccepted,
+    addToCart,
+    removeFromCart,
+    clearCart,
   } = useCart();
 
   const [canteens, setCanteens] = useState<Canteen[]>([]);
@@ -58,10 +90,19 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
 
   const activeCanteen = canteens.find((c) => c.canteen_id === activeCanteenId) || canteens[0];
 
+  const handleClearCart = () => {
+    clearCart();
+    showToast('Your cart has been cleared.', 'info', 'Cart Cleared');
+  };
+
   const handleProceed = async () => {
     if (items.length === 0 || !activeCanteen) return;
     if (!user) {
-      Alert.alert('Authentication Required', 'Please sign in to place an order.');
+      showToast('Please sign in to place an order.', 'error', 'Authentication Required');
+      return;
+    }
+    if (!activeCanteen.is_open) {
+      showToast(`${activeCanteen.name} is currently closed.`, 'error', 'Canteen Closed');
       return;
     }
     if (orderType === 'preorder' && !policyAccepted) {
@@ -69,19 +110,26 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       return;
     }
 
-    const effectivePickupTime = orderType === 'preorder'
-      ? (useCustomTime ? customTimeInput.trim() : pickupTime)
-      : 'Immediate';
+    const effectivePickupTime =
+      orderType === 'preorder'
+        ? useCustomTime
+          ? customTimeInput.trim()
+          : pickupTime
+        : 'Immediate';
 
     let scheduledReleaseAt: string | null = null;
     if (orderType === 'preorder') {
       scheduledReleaseAt = parseScheduledIsoForToday(effectivePickupTime);
       if (!scheduledReleaseAt) {
-        Alert.alert('Invalid Time', 'Please enter a valid time such as "01:30 PM" or "13:30".');
+        showToast(
+          'Please enter a valid time such as "01:30 PM" or "13:30".',
+          'error',
+          'Invalid Time'
+        );
         return;
       }
       if (new Date(scheduledReleaseAt).getTime() <= Date.now()) {
-        Alert.alert('Past Time Selected', 'Please select a future time for your pre-order.');
+        showToast('Please select a future time for your pre-order.', 'error', 'Past Time Selected');
         return;
       }
     }
@@ -113,9 +161,14 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
       });
 
       clearCart();
+      showToast(
+        `Order #${created.token_display} placed at ${activeCanteen.name}.`,
+        'success',
+        'Order Placed'
+      );
       navigation.navigate('OrderTracking', { order: created });
     } catch (e: any) {
-      Alert.alert('Checkout Failed', e.message || 'Could not place order.');
+      showToast(e?.message || 'Could not place order. Please try again.', 'error', 'Checkout Failed');
     } finally {
       setLoading(false);
     }
@@ -129,7 +182,7 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Cart Summary</Text>
         {items.length > 0 ? (
-          <TouchableOpacity onPress={clearCart} style={styles.clearBtn}>
+          <TouchableOpacity onPress={handleClearCart} style={styles.clearBtn}>
             <Text style={styles.clearBtnText}>CLEAR</Text>
           </TouchableOpacity>
         ) : (
@@ -141,18 +194,30 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
         <View style={styles.emptyContainer}>
           <ShoppingBag size={80} color={colors.borderLight} />
           <Text style={styles.emptyTitle}>Your cart is empty</Text>
-          <Text style={styles.emptySubtitle}>Good food is always cooking! Go ahead and order some delicious items.</Text>
-          <TouchableOpacity style={styles.browseButton} onPress={() => navigation.navigate('StudentHome')}>
+          <Text style={styles.emptySubtitle}>
+            Good food is always cooking! Go ahead and order some delicious items.
+          </Text>
+          <TouchableOpacity
+            style={styles.browseButton}
+            onPress={() => navigation.navigate('StudentHome')}
+          >
             <Text style={styles.browseButtonText}>Browse Canteens</Text>
           </TouchableOpacity>
         </View>
       ) : (
-        <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.container}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           {activeCanteen && (
             <View style={styles.canteenBanner}>
-              <Text style={styles.canteenBannerTitle}>{activeCanteenName || activeCanteen.name}</Text>
+              <Text style={styles.canteenBannerTitle}>
+                {activeCanteenName || activeCanteen.name}
+              </Text>
               <Text style={styles.canteenBannerSubtitle}>
-                Floor {activeCanteen.floor === 0 ? 'Ground' : activeCanteen.floor} • Token Prefix [{activeCanteen.token_prefix || 'A'}]
+                Floor {activeCanteen.floor === 0 ? 'Ground' : activeCanteen.floor} • Token Prefix [
+                {activeCanteen.token_prefix || 'A'}]
               </Text>
             </View>
           )}
@@ -161,7 +226,12 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
             {items.map(({ item, quantity }) => (
               <View key={item.menu_item_id} style={styles.cartItemRow}>
                 <View style={styles.itemInfo}>
-                  <View style={[styles.vegIndicatorDot, item.is_veg ? styles.vegDotGreen : styles.vegDotRed]} />
+                  <View
+                    style={[
+                      styles.vegIndicatorDot,
+                      item.is_veg ? styles.vegDotGreen : styles.vegDotRed,
+                    ]}
+                  />
                   <View>
                     <Text style={styles.itemName}>{item.item_name}</Text>
                     <Text style={styles.itemPrice}>₹{item.price}</Text>
@@ -171,7 +241,11 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                 <View style={styles.stepperSubtotalGroup}>
                   <View style={styles.stepper}>
                     <TouchableOpacity onPress={() => removeFromCart(item)} style={styles.stepBtn}>
-                      {quantity === 1 ? <Trash2 size={15} color={colors.accentRed} /> : <Minus size={15} color={colors.primaryDark} />}
+                      {quantity === 1 ? (
+                        <Trash2 size={15} color={colors.accentRed} />
+                      ) : (
+                        <Minus size={15} color={colors.primaryDark} />
+                      )}
                     </TouchableOpacity>
                     <Text style={styles.stepQty}>{quantity}</Text>
                     <TouchableOpacity onPress={() => addToCart(item)} style={styles.stepBtn}>
@@ -192,16 +266,36 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                 onPress={() => setOrderType('instant')}
                 activeOpacity={0.9}
               >
-                <Zap size={18} color={orderType === 'instant' ? '#FFFFFF' : colors.textSecondary} />
-                <Text style={[styles.typeButtonText, orderType === 'instant' && styles.activeTypeButtonText]}>Instant</Text>
+                <Zap
+                  size={18}
+                  color={orderType === 'instant' ? '#FFFFFF' : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    orderType === 'instant' && styles.activeTypeButtonText,
+                  ]}
+                >
+                  Instant
+                </Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.typeButton, orderType === 'preorder' && styles.activeTypeButton]}
                 onPress={() => setOrderType('preorder')}
                 activeOpacity={0.9}
               >
-                <Clock size={18} color={orderType === 'preorder' ? '#FFFFFF' : colors.textSecondary} />
-                <Text style={[styles.typeButtonText, orderType === 'preorder' && styles.activeTypeButtonText]}>Preorder</Text>
+                <Clock
+                  size={18}
+                  color={orderType === 'preorder' ? '#FFFFFF' : colors.textSecondary}
+                />
+                <Text
+                  style={[
+                    styles.typeButtonText,
+                    orderType === 'preorder' && styles.activeTypeButtonText,
+                  ]}
+                >
+                  Preorder
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -224,7 +318,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={[styles.slotText, isSelected && styles.activeSlotText]}>{slot}</Text>
+                      <Text style={[styles.slotText, isSelected && styles.activeSlotText]}>
+                        {slot}
+                      </Text>
                       {isSelected && <Check size={18} color={colors.primary} />}
                     </TouchableOpacity>
                   );
@@ -235,7 +331,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                   onPress={() => setUseCustomTime(true)}
                   activeOpacity={0.7}
                 >
-                  <Text style={[styles.slotText, useCustomTime && styles.activeSlotText]}>Custom Time</Text>
+                  <Text style={[styles.slotText, useCustomTime && styles.activeSlotText]}>
+                    Custom Time
+                  </Text>
                   {useCustomTime && <Check size={18} color={colors.primary} />}
                 </TouchableOpacity>
 
@@ -249,7 +347,8 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                       onChangeText={setCustomTimeInput}
                     />
                     <Text style={styles.customTimeHint}>
-                      Your order will remain Scheduled and automatically release to the canteen at this exact time.
+                      Your order will remain Scheduled and automatically release to the canteen at
+                      this exact time.
                     </Text>
                   </>
                 )}
@@ -260,12 +359,25 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
           <View style={styles.sectionCard}>
             <Text style={styles.sectionHeading}>Payment Method</Text>
             <TouchableOpacity
-              style={[styles.paymentCard, paymentMethod === 'online_demo' && styles.activePaymentCard]}
+              style={[
+                styles.paymentCard,
+                paymentMethod === 'online_demo' && styles.activePaymentCard,
+              ]}
               onPress={() => setPaymentMethod('online_demo')}
             >
-              <CreditCard size={22} color={paymentMethod === 'online_demo' ? colors.primary : colors.textSecondary} />
+              <CreditCard
+                size={22}
+                color={paymentMethod === 'online_demo' ? colors.primary : colors.textSecondary}
+              />
               <View style={styles.paymentTextCol}>
-                <Text style={[styles.paymentTitle, paymentMethod === 'online_demo' && styles.activePaymentTitle]}>Online Payment</Text>
+                <Text
+                  style={[
+                    styles.paymentTitle,
+                    paymentMethod === 'online_demo' && styles.activePaymentTitle,
+                  ]}
+                >
+                  Online Payment
+                </Text>
                 <Text style={styles.paymentSub}>Campus UPI & card payment</Text>
               </View>
               {paymentMethod === 'online_demo' && <Check size={20} color={colors.primary} />}
@@ -275,9 +387,19 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
               style={[styles.paymentCard, paymentMethod === 'cash' && styles.activePaymentCard]}
               onPress={() => setPaymentMethod('cash')}
             >
-              <Banknote size={22} color={paymentMethod === 'cash' ? '#D97706' : colors.textSecondary} />
+              <Banknote
+                size={22}
+                color={paymentMethod === 'cash' ? '#D97706' : colors.textSecondary}
+              />
               <View style={styles.paymentTextCol}>
-                <Text style={[styles.paymentTitle, paymentMethod === 'cash' && styles.activePaymentTitle]}>Pay with Cash</Text>
+                <Text
+                  style={[
+                    styles.paymentTitle,
+                    paymentMethod === 'cash' && styles.activePaymentTitle,
+                  ]}
+                >
+                  Pay with Cash
+                </Text>
                 <Text style={styles.paymentSub}>Pay at the canteen counter</Text>
               </View>
               {paymentMethod === 'cash' && <Check size={20} color={colors.primary} />}
@@ -320,7 +442,9 @@ export const CartScreen: React.FC<CartScreenProps> = ({ navigation }) => {
                   <Text style={styles.btnTotalSub}>TOTAL</Text>
                 </View>
                 <Text style={styles.checkoutBtnText}>
-                  {orderType === 'preorder' && !policyAccepted ? 'REVIEW POLICY  >' : 'PLACE ORDER  >'}
+                  {orderType === 'preorder' && !policyAccepted
+                    ? 'REVIEW POLICY  >'
+                    : 'PLACE ORDER  >'}
                 </Text>
               </>
             )}

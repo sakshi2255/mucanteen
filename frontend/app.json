@@ -21,12 +21,16 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/logo-icon.png"
     },
     "extra": {
       "eas": {
-        "projectId": "b1f127cb-487c-40bf-b69c-e9dc5e055a94"
+        "projectId": "a881ca7b-2577-4c23-a4a1-33a369a6d05d"
       }
-    }
+    },
+    "plugins": [
+      "@react-native-community/datetimepicker"
+    ],
+    "owner": "sakshi2255"
   }
 }

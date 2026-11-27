@@ -1,15 +1,16 @@
 import { Alert, Linking, Platform } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import Constants from 'expo-constants';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../config/firebaseConfig';
-import { createNotificationForUser } from './firestoreService';
+import { createNotificationForUser, sendPushToUser } from './firestoreService';
 import type { AppNotification, NotificationSettings } from '../models/types';
 
 type NotificationType = AppNotification['type'];
 
-// Show heads-up banner, sound, and badge even when the app is open
+const isExpoGo = Constants.executionEnvironment === ExecutionEnvironment.StoreClient;
+
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
     shouldShowAlert: true,
@@ -21,50 +22,56 @@ Notifications.setNotificationHandler({
 });
 
 export async function configureAndroidChannel(): Promise<void> {
-  if (Platform.OS === 'android') {
+  if (Platform.OS !== 'android' || isExpoGo) return;
+  try {
     await Notifications.setNotificationChannelAsync('mu-canteen-orders', {
       name: 'Order Updates & Alerts',
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#079FA7',
-      sound: 'default',
       enableVibrate: true,
     });
+  } catch {
+    // Fallback safely if channel manager is unavailable
   }
 }
 
 export async function requestPermissions(promptSettingsIfDenied = true): Promise<boolean> {
   await configureAndroidChannel();
 
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
+  try {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
 
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-
-  if (finalStatus !== 'granted') {
-    if (promptSettingsIfDenied) {
-      Alert.alert(
-        'Enable Notifications',
-        'MU Canteen needs notification permission to alert you when your food is preparing, ready for pickup, or nearing the pickup deadline.',
-        [
-          { text: 'Not Now', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() },
-        ]
-      );
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
     }
+
+    if (finalStatus !== 'granted') {
+      if (promptSettingsIfDenied) {
+        Alert.alert(
+          'Enable Notifications',
+          'MU Canteen needs notification permission to alert you when your food is preparing, ready for pickup, or nearing the pickup deadline.',
+          [
+            { text: 'Not Now', style: 'cancel' },
+            { text: 'Open Settings', onPress: () => Linking.openSettings() },
+          ]
+        );
+      }
+      return false;
+    }
+
+    return true;
+  } catch {
     return false;
   }
-
-  return true;
 }
 
 export async function registerAndSavePushToken(userId: string): Promise<string | null> {
   try {
     const granted = await requestPermissions(true);
-    if (!granted || !Device.isDevice) return null;
+    if (!granted || !Device.isDevice || isExpoGo) return null;
 
     const projectId =
       Constants.expoConfig?.extra?.eas?.projectId ?? Constants.easConfig?.projectId;
@@ -85,39 +92,6 @@ export async function registerAndSavePushToken(userId: string): Promise<string |
   } catch (err) {
     console.warn('Push token registration notice:', err);
     return null;
-  }
-}
-
-export async function sendPushToUser(
-  userId: string,
-  title: string,
-  body: string,
-  data: Record<string, unknown> = {}
-): Promise<void> {
-  try {
-    const userSnap = await getDoc(doc(db, 'users', userId));
-    const pushToken = userSnap.exists() ? (userSnap.data() as any)?.expo_push_token : null;
-    if (!pushToken) return;
-
-    await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        Accept: 'application/json',
-        'Accept-encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: pushToken,
-        sound: 'default',
-        title,
-        body,
-        data,
-        channelId: 'mu-canteen-orders',
-        priority: 'high',
-      }),
-    });
-  } catch (err) {
-    console.warn('Remote push send notice:', err);
   }
 }
 
@@ -291,7 +265,5 @@ export async function cancelNotificationsForOrder(orderId: string): Promise<void
         await Notifications.cancelScheduledNotificationAsync(notif.identifier);
       }
     }
-  } catch {
-    // ignore
-  }
+  } catch {}
 }

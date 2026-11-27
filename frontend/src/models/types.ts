@@ -5,17 +5,19 @@ export interface UserProfile {
   name: string;
   enrollment_number: string;
   email: string;
+  phone?: string;
   role_id: UserRole;
   role: 'Student' | 'Faculty' | 'Canteen Operator' | 'College Administrator';
   account_status: 'active' | 'suspended';
   is_deleted: boolean;
   assigned_canteen_ids: string[];
   favourite_canteen_ids?: string[];
+  expo_push_token?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-export type CanteenType = 
+export type CanteenType =
   | 'common'
   | 'faculty_only'
   | 'stationery_canteen'
@@ -38,6 +40,7 @@ export interface Canteen {
   acceptance_mode: AcceptanceMode;
   operating_hours: string;
   summary?: string;
+  banner_url?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -84,9 +87,9 @@ export type OrderType = 'instant' | 'preorder';
 
 export type PaymentMethod = 'online_demo' | 'cash';
 
-export type PaymentStatus = 'PAID_ONLINE_DEMO' | 'CASH_PENDING' | 'CASH_RECEIVED';
+export type PaymentStatus = 'PAID_ONLINE_DEMO' | 'CASH_PENDING' | 'CASH_RECEIVED' | 'REFUNDED';
 
-export type OrderStatus = 
+export type OrderStatus =
   | 'scheduled'           // pre-order waiting for scheduled release timestamp
   | 'awaiting_acceptance' // student sees "In Queue"
   | 'preparing'           // student sees "Preparing"
@@ -198,7 +201,15 @@ export interface AppNotification {
   order_id: string;
   title: string;
   body: string;
-  type: 'order_placed' | 'order_accepted' | 'order_preparing' | 'order_ready' | 'pickup_warning' | 'pickup_failed' | 'order_declined' | 'order_cancelled';
+  type:
+    | 'order_placed'
+    | 'order_accepted'
+    | 'order_preparing'
+    | 'order_ready'
+    | 'pickup_warning'
+    | 'pickup_failed'
+    | 'order_declined'
+    | 'order_cancelled';
   is_read: boolean;
   created_at: string;
 }

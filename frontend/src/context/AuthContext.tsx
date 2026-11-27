@@ -1,14 +1,14 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { 
-  signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword, 
-  signOut, 
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signInAnonymously,
+  signOut,
   onAuthStateChanged,
-  User as FirebaseUser
+  User as FirebaseUser,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, query, setDoc, where } from 'firebase/firestore';
 import { auth, db } from '../config/firebaseConfig';
-import { DEMO_PROFILES } from '../services/seedData';
 import type { UserProfile, UserRole } from '../models/types';
 
 interface AuthContextType {
@@ -25,44 +25,66 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType>({} as AuthContextType);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<UserProfile | null>(DEMO_PROFILES[0]);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const manualSwitchRef = useRef<boolean>(false);
+
+  const fetchUserProfile = async (fbUser: FirebaseUser): Promise<UserProfile | null> => {
+    const directSnap = await getDoc(doc(db, 'users', fbUser.uid));
+    if (directSnap.exists()) {
+      return { ...(directSnap.data() as UserProfile), user_id: directSnap.id };
+    }
+    if (fbUser.email) {
+      const q = query(collection(db, 'users'), where('email', '==', fbUser.email));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const first = snap.docs[0];
+        return { ...(first.data() as UserProfile), user_id: first.id };
+      }
+    }
+    return null;
+  };
 
   useEffect(() => {
-    if (!auth.currentUser) {
-      signInWithEmailAndPassword(auth, 'student@marwadiuniversity.ac.in', 'password123').catch(() => {});
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
       setFirebaseUser(fbUser);
-      if (fbUser) {
+
+      if (manualSwitchRef.current) {
+        setIsLoading(false);
+        return;
+      }
+
+      if (fbUser && !fbUser.isAnonymous) {
         try {
-          const userDoc = await getDoc(doc(db, 'users', fbUser.uid));
-          if (userDoc.exists()) {
-            setUser(userDoc.data() as UserProfile);
+          const profile = await fetchUserProfile(fbUser);
+          if (profile) {
+            setUser(profile);
           } else {
-            const matchedDemo = DEMO_PROFILES.find((p) => p.email.toLowerCase() === (fbUser.email || '').toLowerCase());
-            const defaultProfile: UserProfile = matchedDemo ? { ...matchedDemo, user_id: fbUser.uid } : {
+            const newProfile: UserProfile = {
               user_id: fbUser.uid,
-              name: fbUser.displayName || fbUser.email?.split('@')[0] || 'MU Student',
-              enrollment_number: '92100103001',
+              name: fbUser.displayName || fbUser.email?.split('@')[0] || 'MU User',
+              enrollment_number: '',
               email: fbUser.email || '',
               role_id: 'student',
               role: 'Student',
               account_status: 'active',
               is_deleted: false,
               assigned_canteen_ids: [],
+              favourite_canteen_ids: [],
               created_at: new Date().toISOString(),
               updated_at: new Date().toISOString(),
             };
-            await setDoc(doc(db, 'users', fbUser.uid), defaultProfile);
-            setUser(defaultProfile);
+            await setDoc(doc(db, 'users', fbUser.uid), newProfile);
+            setUser(newProfile);
           }
         } catch (err) {
           console.warn('Auth user doc fetch notice:', err);
         }
+      } else if (!fbUser) {
+        setUser(null);
       }
+
       setIsLoading(false);
     });
 
@@ -70,27 +92,37 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (email: string, pass: string) => {
+    manualSwitchRef.current = false;
     setIsLoading(true);
     try {
       const cred = await signInWithEmailAndPassword(auth, email, pass);
-      const userDoc = await getDoc(doc(db, 'users', cred.user.uid));
-      if (userDoc.exists()) {
-        setUser(userDoc.data() as UserProfile);
-      }
-    } catch (e: any) {
-      const matched = DEMO_PROFILES.find((p) => p.email.toLowerCase() === email.toLowerCase());
-      if (matched) setUser(matched);
-      else throw e;
+      const profile = await fetchUserProfile(cred.user);
+      if (profile) setUser(profile);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const register = async (name: string, email: string, pass: string, enrollmentNumber: string, role: UserRole) => {
+  const register = async (
+    name: string,
+    email: string,
+    pass: string,
+    enrollmentNumber: string,
+    role: UserRole
+  ) => {
+    manualSwitchRef.current = false;
     setIsLoading(true);
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, pass);
-      const roleName = role === 'admin' ? 'College Administrator' : role === 'operator' ? 'Canteen Operator' : role === 'faculty' ? 'Faculty' : 'Student';
+      const roleName =
+        role === 'admin'
+          ? 'College Administrator'
+          : role === 'operator'
+            ? 'Canteen Operator'
+            : role === 'faculty'
+              ? 'Faculty'
+              : 'Student';
+
       const newProfile: UserProfile = {
         user_id: cred.user.uid,
         name,
@@ -101,6 +133,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         account_status: 'active',
         is_deleted: false,
         assigned_canteen_ids: role === 'operator' ? ['canteen_main_1'] : [],
+        favourite_canteen_ids: [],
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       };
@@ -112,22 +145,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const logout = async () => {
-    try { await signOut(auth); } catch (e) {}
+    manualSwitchRef.current = false;
+    try {
+      await signOut(auth);
+    } catch {}
     setUser(null);
     setFirebaseUser(null);
   };
 
-  // Upgraded to accept specific user profiles from Firestore
   const switchDemoUser = (targetUser: UserProfile) => {
+    manualSwitchRef.current = true;
     setUser(targetUser);
+
     if (targetUser.email) {
-      // Attempt backend auth silently if they have standard password
-      signInWithEmailAndPassword(auth, targetUser.email, 'password123').catch(() => {});
+      signInWithEmailAndPassword(auth, targetUser.email, 'password123').catch(() => {
+        signInAnonymously(auth).catch(() => {});
+      });
+    } else {
+      signInAnonymously(auth).catch(() => {});
     }
   };
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isLoading, role: user?.role_id || 'student', login, register, logout, switchDemoUser }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        firebaseUser,
+        isLoading,
+        role: user?.role_id || 'student',
+        login,
+        register,
+        logout,
+        switchDemoUser,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

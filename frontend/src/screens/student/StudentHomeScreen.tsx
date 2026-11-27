@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, ScrollView, TextInput, TouchableOpacity, Alert, StatusBar } from 'react-native';
+import { View, Text, ScrollView, TextInput, TouchableOpacity, StatusBar } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Search, ArrowRight, Store, Heart } from 'lucide-react-native';
 import { colors } from '../../config/theme';
@@ -9,15 +9,24 @@ import { CanteenCard } from '../../components/common/CanteenCard';
 import { LiveOrderBanner } from '../../components/common/LiveOrderBanner';
 import { useAuth } from '../../context/AuthContext';
 import { useCart } from '../../context/CartContext';
-import { listenCanteens, listenPromotions, initializeFirestoreIfNeeded } from '../../services/firestoreService';
+import { useToast } from '../../context/ToastContext';
+import {
+  listenCanteens,
+  listenPromotions,
+  initializeFirestoreIfNeeded,
+} from '../../services/firestoreService';
 import type { Canteen, Promotion } from '../../models/types';
 import { styles } from '../../styles/student/StudentHomeStyles';
 
-interface StudentHomeScreenProps { navigation: any; }
+interface StudentHomeScreenProps {
+  navigation: any;
+}
 
 export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation }) => {
   const { user, role } = useAuth();
   const { items: cartItems, subtotal, itemCount } = useCart();
+  const { showToast } = useToast();
+
   const [canteens, setCanteens] = useState<Canteen[]>([]);
   const [promotions, setPromotions] = useState<Promotion[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,14 +41,21 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation
     initializeFirestoreIfNeeded();
     const unsubCanteens = listenCanteens((data) => setCanteens(data));
     const unsubPromos = listenPromotions((data) => setPromotions(data));
-    return () => { unsubCanteens(); unsubPromos(); };
+    return () => {
+      unsubCanteens();
+      unsubPromos();
+    };
   }, []);
 
   const handleCanteenPress = (canteen: Canteen) => {
     const isFacultyOnly = canteen.canteen_type === 'faculty_only';
     const isEligible = !isFacultyOnly || role === 'faculty' || role === 'admin';
     if (!isEligible) {
-      Alert.alert('Faculty-Only Dining', 'This dining facility is strictly restricted to Faculty and Staff members.', [{ text: 'Understood' }]);
+      showToast(
+        'This dining facility is strictly restricted to Faculty and Staff members.',
+        'info',
+        'Faculty-Only Dining'
+      );
       return;
     }
     navigation.navigate('CanteenMenu', { canteen });
@@ -72,14 +88,25 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation
         favouritesCount={favouriteIds.length}
         onPressCart={() => navigation.navigate('Cart')}
         onPressProfile={() => navigation.navigate('Profile')}
-        onPressFavourites={() => setSelectedBuilding(selectedBuilding === 'favourites' ? 'all' : 'favourites')}
+        onPressFavourites={() =>
+          setSelectedBuilding(selectedBuilding === 'favourites' ? 'all' : 'favourites')
+        }
       />
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false} stickyHeaderIndices={[2]}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        stickyHeaderIndices={[2]}
+      >
         <PromotionalBanner
           promotions={promotions}
           onSelectPromotion={(promo) => {
-            Alert.alert(promo.title, `${promo.subtitle}\n\nUse Code: ${promo.discount_code} (${promo.discount_percent}% OFF)`);
+            showToast(
+              `${promo.subtitle} · Use code ${promo.discount_code} (${promo.discount_percent}% OFF)`,
+              'info',
+              promo.title
+            );
           }}
         />
         <View style={styles.searchContainer}>
@@ -94,7 +121,11 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation
           />
         </View>
         <View style={styles.filterSection}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterScroll}
+          >
             {['all', 'main', 'law', 'hostel'].map((bldg) => (
               <TouchableOpacity
                 key={bldg}
@@ -102,18 +133,42 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation
                 onPress={() => setSelectedBuilding(bldg)}
                 activeOpacity={0.8}
               >
-                <Text style={[styles.filterChipText, selectedBuilding === bldg && styles.filterChipTextActive]}>
-                  {bldg === 'all' ? 'All Canteens' : bldg === 'main' ? 'Main Bldg' : bldg === 'law' ? 'Law Bldg' : 'Hostel'}
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    selectedBuilding === bldg && styles.filterChipTextActive,
+                  ]}
+                >
+                  {bldg === 'all'
+                    ? 'All Canteens'
+                    : bldg === 'main'
+                      ? 'Main Bldg'
+                      : bldg === 'law'
+                        ? 'Law Bldg'
+                        : 'Hostel'}
                 </Text>
               </TouchableOpacity>
             ))}
             <TouchableOpacity
-              style={[styles.filterChip, selectedBuilding === 'favourites' && styles.filterChipActive]}
+              style={[
+                styles.filterChip,
+                selectedBuilding === 'favourites' && styles.filterChipActive,
+              ]}
               onPress={() => setSelectedBuilding('favourites')}
               activeOpacity={0.8}
             >
-              <Heart size={14} color={selectedBuilding === 'favourites' ? '#FFFFFF' : colors.accentOrange} />
-              <Text style={[styles.filterChipText, selectedBuilding === 'favourites' && styles.filterChipTextActive]}>Saved</Text>
+              <Heart
+                size={14}
+                color={selectedBuilding === 'favourites' ? '#FFFFFF' : colors.accentOrange}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  selectedBuilding === 'favourites' && styles.filterChipTextActive,
+                ]}
+              >
+                Saved
+              </Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -145,24 +200,32 @@ export const StudentHomeScreen: React.FC<StudentHomeScreenProps> = ({ navigation
         </View>
       </ScrollView>
 
-      {cartItems.length > 0 && (
-        <View style={styles.stickyCartBar}>
-          <View style={styles.cartBarInfo}>
-            <View style={styles.cartCountBadge}><Text style={styles.cartCountText}>{itemCount}</Text></View>
-            <View>
-              <Text style={styles.cartBarTotal}>₹{subtotal}</Text>
-              <Text style={styles.cartBarSubtitle}>Extra charges may apply</Text>
+      {/* Docked bottom stack: Cart Bar sits cleanly above LiveOrderBanner with zero overlap */}
+      <View style={styles.bottomDock}>
+        {cartItems.length > 0 && (
+          <View style={styles.stickyCartBar}>
+            <View style={styles.cartBarInfo}>
+              <View style={styles.cartCountBadge}>
+                <Text style={styles.cartCountText}>{itemCount}</Text>
+              </View>
+              <View>
+                <Text style={styles.cartBarTotal}>₹{subtotal}</Text>
+                <Text style={styles.cartBarSubtitle}>Ready to checkout</Text>
+              </View>
             </View>
+            <TouchableOpacity
+              style={styles.cartBarButton}
+              onPress={() => navigation.navigate('Cart')}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.cartBarButtonText}>VIEW CART</Text>
+              <ArrowRight size={18} color="#FFFFFF" />
+            </TouchableOpacity>
           </View>
-          <TouchableOpacity style={styles.cartBarButton} onPress={() => navigation.navigate('Cart')} activeOpacity={0.8}>
-            <Text style={styles.cartBarButtonText}>VIEW CART</Text>
-            <ArrowRight size={18} color="#FFFFFF" />
-          </TouchableOpacity>
-        </View>
-      )}
+        )}
 
-      {/* Flush above bottom navigation bar */}
-      <LiveOrderBanner />
+        <LiveOrderBanner />
+      </View>
     </SafeAreaView>
   );
 };

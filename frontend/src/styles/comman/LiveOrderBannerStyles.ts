@@ -5,7 +5,7 @@ export const styles = StyleSheet.create({
   container: {
     marginHorizontal: 12,
     marginBottom: 8,
-    marginTop: 4,
+    marginTop: 2,
     backgroundColor: '#0cb6bc',
     borderRadius: borderRadius.lg,
     padding: spacing.md,
@@ -20,6 +20,7 @@ export const styles = StyleSheet.create({
   infoCol: {
     flex: 1,
     marginLeft: spacing.sm,
+    marginRight: spacing.xs,
   },
   multiHeaderRow: {
     flexDirection: 'row',

@@ -1,11 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, Switch } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ListOrdered, UtensilsCrossed, CheckCircle2, BarChart3 } from 'lucide-react-native';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 import { colors } from '../../config/theme';
 import { DashboardNavCard } from '../../components/common/DashboardNavCard';
 import { useAuth } from '../../context/AuthContext';
-import { listenOperatorOrders, listenCanteens, toggleCanteenStatus } from '../../services/firestoreService';
+import { useToast } from '../../context/ToastContext';
+import { listenCanteens, toggleCanteenStatus } from '../../services/firestoreService';
 import type { Canteen, Order } from '../../models/types';
 import { styles } from '../../styles/operator/OperatorDashboardStyles';
 
@@ -15,6 +18,7 @@ interface OperatorDashboardScreenProps {
 
 export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = ({ navigation }) => {
   const { user } = useAuth();
+  const { showToast } = useToast();
   const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen_main_1';
 
   const [canteen, setCanteen] = useState<Canteen | null>(null);
@@ -25,44 +29,98 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
       const match = list.find((c) => c.canteen_id === assignedCanteenId);
       if (match) setCanteen(match);
     });
-    const unsubOrders = listenOperatorOrders(assignedCanteenId, (orderList) => {
-      setOrders(orderList);
-    });
+
+    const ordersQuery = query(
+      collection(db, 'orders'),
+      where('canteen_id', '==', assignedCanteenId)
+    );
+    const unsubOrders = onSnapshot(
+      ordersQuery,
+      (snapshot) => {
+        const list = snapshot.docs
+          .map((d) => d.data() as Order)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setOrders(list);
+      },
+      (error) => {
+        console.warn('Operator dashboard orders error:', error.message);
+        showToast('Could not sync canteen orders.', 'error');
+      }
+    );
+
     return () => {
       unsubCanteens();
       unsubOrders();
     };
-  }, [assignedCanteenId]);
+  }, [assignedCanteenId, showToast]);
 
   const handleToggleOpen = async (val: boolean) => {
     if (!canteen) return;
-    await toggleCanteenStatus(
-      canteen.canteen_id,
-      val,
-      { id: user?.user_id || 'op', name: user?.name || 'Operator', role: 'operator' }
-    );
+    try {
+      await toggleCanteenStatus(canteen.canteen_id, val, {
+        id: user?.user_id || 'op',
+        name: user?.name || 'Operator',
+        role: 'operator',
+      });
+      showToast(
+        val ? 'Canteen is now OPEN for orders.' : 'Canteen is now CLOSED.',
+        val ? 'success' : 'info',
+        'Status Updated'
+      );
+    } catch {
+      showToast('Failed to update canteen status.', 'error');
+    }
   };
 
-  const pendingCount = orders.filter((o) => o.order_status === 'awaiting_acceptance').length;
-  const preparingCount = orders.filter((o) => o.order_status === 'preparing').length;
-  const readyCount = orders.filter((o) => o.order_status === 'ready_for_pickup').length;
-  const todayRevenue = orders
-    .filter((o) => o.order_status === 'picked_up' || o.payment_status === 'PAID_ONLINE_DEMO' || o.payment_status === 'CASH_RECEIVED')
-    .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+  const pendingCount = useMemo(
+    () => orders.filter((o) => o.order_status === 'awaiting_acceptance').length,
+    [orders]
+  );
+  const preparingCount = useMemo(
+    () => orders.filter((o) => o.order_status === 'preparing').length,
+    [orders]
+  );
+  const readyCount = useMemo(
+    () => orders.filter((o) => o.order_status === 'ready_for_pickup').length,
+    [orders]
+  );
+
+  // Unified overall revenue across Cash + Online & Instant + Preorders (excluding declined/cancelled/refunded)
+  const validRevenueOrders = useMemo(
+    () =>
+      orders.filter(
+        (o) =>
+          o.order_status !== 'declined' &&
+          o.order_status !== 'cancelled' &&
+          o.payment_status !== 'REFUNDED'
+      ),
+    [orders]
+  );
+
+  const overallRevenue = useMemo(
+    () => validRevenueOrders.reduce((sum, o) => sum + (Number(o.total) || 0), 0),
+    [validRevenueOrders]
+  );
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.header}>
-        <View>
+        <View style={styles.headerTextCol}>
           <Text style={styles.headerRole}>OPERATOR CONSOLE</Text>
-          <Text style={styles.headerTitle}>{canteen?.name || 'Canteen Console'}</Text>
+          <Text style={styles.headerTitle} numberOfLines={1}>
+            {canteen?.name || 'Canteen Console'}
+          </Text>
         </View>
         <TouchableOpacity style={styles.profileBtn} onPress={() => navigation.navigate('Profile')}>
-          <Text style={styles.profileBtnText}>{user?.name?.slice(0, 2).toUpperCase()}</Text>
+          <Text style={styles.profileBtnText}>{user?.name?.slice(0, 2).toUpperCase() || 'OP'}</Text>
         </TouchableOpacity>
       </View>
 
-      <ScrollView style={styles.container} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.canteenStatusCard}>
           <View style={styles.toggleRow}>
             <View style={styles.toggleTextCol}>
@@ -116,8 +174,9 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
             onPress={() => navigation.navigate('OperatorReports')}
             activeOpacity={0.8}
           >
-            <Text style={styles.metricLabel}>REVENUE</Text>
-            <Text style={[styles.metricValue, styles.valueRevenue]}>₹{todayRevenue}</Text>
+            <Text style={styles.metricLabel}>OVERALL REVENUE</Text>
+            <Text style={[styles.metricValue, styles.valueRevenue]}>₹{overallRevenue}</Text>
+            <Text style={styles.metricSubtext}>{validRevenueOrders.length} total orders</Text>
           </TouchableOpacity>
         </View>
 
@@ -147,7 +206,7 @@ export const OperatorDashboardScreen: React.FC<OperatorDashboardScreenProps> = (
 
         <DashboardNavCard
           title="Reports, Orders & Payments"
-          subtitle="Revenue, past order search & payment history"
+          subtitle="Overall revenue, online/cash splits & order history"
           icon={<BarChart3 size={20} color={colors.primary} />}
           onPress={() => navigation.navigate('OperatorReports')}
         />

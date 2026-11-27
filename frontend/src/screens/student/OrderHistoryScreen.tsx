@@ -2,42 +2,108 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, FlatList, TouchableOpacity, ScrollView, Modal, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, History, Calendar, X } from 'lucide-react-native';
+import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { db } from '../../config/firebaseConfig';
 import { colors } from '../../config/theme';
 import { OrderCardCompact } from '../../components/common/OrderCardCompact';
 import { useAuth } from '../../context/AuthContext';
-import { listenStudentOrders } from '../../services/firestoreService';
+import { useToast } from '../../context/ToastContext';
 import { styles } from '../../styles/student/OrderHistoryStyles';
 import type { Order, OrderStatus } from '../../models/types';
 
 interface OrderHistoryScreenProps {
   navigation: any;
-  route?: { params?: { mode?: 'live' | 'history' } };
+  route?: { params?: { mode?: 'live' | 'history'; scope?: 'user' | 'canteen' } };
 }
 
 const LIVE_STATUSES: OrderStatus[] = ['scheduled', 'awaiting_acceptance', 'preparing', 'ready_for_pickup'];
 const PAST_STATUSES: OrderStatus[] = ['picked_up', 'not_collected', 'declined', 'cancelled'];
 
 export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigation, route }) => {
-  const { user } = useAuth();
+  const { user, firebaseUser } = useAuth();
+  const { showToast } = useToast();
+
   const mode = route?.params?.mode || 'history';
   const isLiveMode = mode === 'live';
+  const isCanteenScope = route?.params?.scope === 'canteen' || user?.role_id === 'operator';
+  const assignedCanteenId = user?.assigned_canteen_ids?.[0] || 'canteen_main_1';
 
   const [orders, setOrders] = useState<Order[]>([]);
+  const [statusScope, setStatusScope] = useState<'all' | 'past' | 'active'>(
+    isCanteenScope ? 'past' : 'all'
+  );
   const [timePreset, setTimePreset] = useState<'all' | 'today' | 'week' | 'custom'>('all');
-  const [customDate, setCustomDate] = useState(''); // YYYY-MM-DD
-  const [customStartTime, setCustomStartTime] = useState(''); // HH:MM
-  const [customEndTime, setCustomEndTime] = useState(''); // HH:MM
+  const [customDate, setCustomDate] = useState('');
+  const [customStartTime, setCustomStartTime] = useState('');
+  const [customEndTime, setCustomEndTime] = useState('');
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
   useEffect(() => {
-    if (!user) return;
-    const unsub = listenStudentOrders(user.user_id, (data) => setOrders(data));
+    setStatusScope(isCanteenScope ? 'past' : 'all');
+  }, [isCanteenScope]);
+
+  useEffect(() => {
+    if (!user) {
+      setOrders([]);
+      return;
+    }
+
+    if (isCanteenScope) {
+      const q = query(collection(db, 'orders'), where('canteen_id', '==', assignedCanteenId));
+      const unsub = onSnapshot(
+        q,
+        (snapshot) => {
+          const list = snapshot.docs
+            .map((d) => d.data() as Order)
+            .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+          setOrders(list);
+        },
+        (error) => {
+          console.warn('Canteen order history listener error:', error.message);
+          showToast('Could not load canteen order history.', 'error');
+        }
+      );
+      return unsub;
+    }
+
+    const userIds = new Set<string>([user.user_id]);
+    if (firebaseUser?.uid && firebaseUser.email?.toLowerCase() === user.email?.toLowerCase()) {
+      userIds.add(firebaseUser.uid);
+    }
+
+    const idList = Array.from(userIds).filter(Boolean);
+    const q =
+      idList.length > 1
+        ? query(collection(db, 'orders'), where('user_id', 'in', idList))
+        : query(collection(db, 'orders'), where('user_id', '==', idList[0]));
+
+    const unsub = onSnapshot(
+      q,
+      (snapshot) => {
+        const list = snapshot.docs
+          .map((d) => d.data() as Order)
+          .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+        setOrders(list);
+      },
+      (error) => {
+        console.warn('User order history listener error:', error.message);
+        showToast('Could not load your orders.', 'error');
+      }
+    );
+
     return unsub;
-  }, [user]);
+  }, [user, firebaseUser?.uid, firebaseUser?.email, isCanteenScope, assignedCanteenId, showToast]);
 
   const filteredOrders = useMemo(() => {
-    const allowedStatuses = isLiveMode ? LIVE_STATUSES : PAST_STATUSES;
-    let result = orders.filter((o) => allowedStatuses.includes(o.order_status));
+    let result = orders;
+
+    if (isLiveMode) {
+      result = result.filter((o) => LIVE_STATUSES.includes(o.order_status));
+    } else if (statusScope === 'past') {
+      result = result.filter((o) => PAST_STATUSES.includes(o.order_status));
+    } else if (statusScope === 'active') {
+      result = result.filter((o) => LIVE_STATUSES.includes(o.order_status));
+    }
 
     if (!isLiveMode && timePreset !== 'all') {
       const now = new Date();
@@ -62,7 +128,13 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
     }
 
     return result;
-  }, [orders, isLiveMode, timePreset, customDate, customStartTime, customEndTime]);
+  }, [orders, isLiveMode, statusScope, timePreset, customDate, customStartTime, customEndTime]);
+
+  const screenTitle = isLiveMode
+    ? 'Live Orders'
+    : isCanteenScope
+      ? 'Canteen Order History'
+      : 'My Order History';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -74,30 +146,71 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
         ) : (
           <View style={styles.headerSpacer} />
         )}
-        <Text style={styles.headerTitle}>{isLiveMode ? 'Live Orders' : 'Order History'}</Text>
+        <Text style={styles.headerTitle}>{screenTitle}</Text>
         <View style={styles.headerSpacer} />
       </View>
 
       {!isLiveMode && (
-        <View style={styles.filterBar}>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterBar}>
+        <View style={styles.filterBarWrap}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.filterBar}
+          >
+            {(
+              [
+                { id: 'past', label: 'Past Orders' },
+                { id: 'all', label: 'All Orders' },
+                { id: 'active', label: 'Active' },
+              ] as const
+            ).map((tab) => (
+              <TouchableOpacity
+                key={tab.id}
+                style={[styles.filterChip, statusScope === tab.id && styles.filterChipActive]}
+                onPress={() => setStatusScope(tab.id)}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    statusScope === tab.id && styles.filterChipTextActive,
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+
             {(['all', 'today', 'week'] as const).map((preset) => (
               <TouchableOpacity
                 key={preset}
                 style={[styles.filterChip, timePreset === preset && styles.filterChipActive]}
                 onPress={() => setTimePreset(preset)}
               >
-                <Text style={[styles.filterChipText, timePreset === preset && styles.filterChipTextActive]}>
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    timePreset === preset && styles.filterChipTextActive,
+                  ]}
+                >
                   {preset === 'all' ? 'All Time' : preset === 'today' ? 'Today' : 'Last 7 Days'}
                 </Text>
               </TouchableOpacity>
             ))}
+
             <TouchableOpacity
               style={[styles.filterChip, timePreset === 'custom' && styles.filterChipActive]}
               onPress={() => setFilterModalVisible(true)}
             >
-              <Calendar size={13} color={timePreset === 'custom' ? '#FFFFFF' : colors.textSecondary} />
-              <Text style={[styles.filterChipText, timePreset === 'custom' && styles.filterChipTextActive]}>
+              <Calendar
+                size={13}
+                color={timePreset === 'custom' ? '#FFFFFF' : colors.textSecondary}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  timePreset === 'custom' && styles.filterChipTextActive,
+                ]}
+              >
                 {timePreset === 'custom' && customDate ? customDate : 'Date & Time'}
               </Text>
             </TouchableOpacity>
@@ -109,11 +222,15 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
         {filteredOrders.length === 0 ? (
           <View style={styles.emptyContainer}>
             <History size={64} color={colors.borderLight} />
-            <Text style={styles.emptyTitle}>{isLiveMode ? 'No active orders' : 'No past orders found'}</Text>
+            <Text style={styles.emptyTitle}>
+              {isLiveMode ? 'No active orders' : 'No orders found'}
+            </Text>
             <Text style={styles.emptySubtitle}>
               {isLiveMode
                 ? 'Orders currently in queue, preparing, or ready for pickup will appear here.'
-                : 'Your completed, cancelled, or expired orders will appear here.'}
+                : isCanteenScope
+                  ? 'Completed, cancelled, declined, or expired orders for your canteen will appear here.'
+                  : 'Orders placed from your account will appear here.'}
             </Text>
           </View>
         ) : (
@@ -125,8 +242,12 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
             renderItem={({ item }) => (
               <OrderCardCompact
                 order={item}
-                isOperatorView={false}
-                onPressTrack={(ord) => navigation.navigate('OrderTracking', { order: ord })}
+                isOperatorView={isCanteenScope}
+                onPressTrack={
+                  isCanteenScope
+                    ? undefined
+                    : (ord) => navigation.navigate('OrderTracking', { order: ord })
+                }
               />
             )}
           />
@@ -146,7 +267,7 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
             <Text style={styles.inputLabel}>Date (YYYY-MM-DD)</Text>
             <TextInput
               style={styles.textInput}
-              placeholder="e.g. 2026-11-23"
+              placeholder="e.g. 2026-11-27"
               placeholderTextColor={colors.textMuted}
               value={customDate}
               onChangeText={setCustomDate}
@@ -179,6 +300,7 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
                   setCustomEndTime('');
                   setTimePreset('all');
                   setFilterModalVisible(false);
+                  showToast('Date filter cleared.', 'info');
                 }}
               >
                 <Text style={styles.resetBtnText}>Reset</Text>
@@ -186,7 +308,10 @@ export const OrderHistoryScreen: React.FC<OrderHistoryScreenProps> = ({ navigati
               <TouchableOpacity
                 style={styles.applyBtn}
                 onPress={() => {
-                  if (customDate.trim()) setTimePreset('custom');
+                  if (customDate.trim()) {
+                    setTimePreset('custom');
+                    showToast(`Filtered orders for ${customDate.trim()}.`, 'success');
+                  }
                   setFilterModalVisible(false);
                 }}
               >

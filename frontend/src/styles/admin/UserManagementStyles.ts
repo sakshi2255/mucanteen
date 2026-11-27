@@ -18,23 +18,28 @@ export const styles = StyleSheet.create({
   backBtn: {
     padding: 4,
   },
+  addBtn: {
+    padding: 4,
+  },
   headerTitle: {
     fontSize: typography.fontSizes.base,
     fontWeight: typography.fontWeights.heavy,
     color: colors.textPrimary,
   },
   filterTabs: {
-    flexDirection: 'row',
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
     backgroundColor: colors.surface,
-    gap: 6,
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  filterTabsContent: {
+    flexDirection: 'row',
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    gap: 8,
+  },
   tab: {
     paddingHorizontal: spacing.md,
-    paddingVertical: 5,
+    paddingVertical: 6,
     borderRadius: borderRadius.round,
     backgroundColor: colors.surfaceAlt,
   },
@@ -49,9 +54,21 @@ export const styles = StyleSheet.create({
   activeTabText: {
     color: '#FFFFFF',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   listContent: {
     padding: spacing.lg,
     gap: spacing.sm,
+    paddingBottom: spacing.xl,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: colors.textMuted,
+    marginTop: 40,
+    fontSize: 13,
   },
   userCard: {
     backgroundColor: colors.surface,
@@ -74,6 +91,11 @@ export const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  userInfoCol: {
+    flex: 1,
+    marginLeft: 12,
+    marginRight: 8,
+  },
   userName: {
     fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.bold,
@@ -82,6 +104,11 @@ export const styles = StyleSheet.create({
   userEmail: {
     fontSize: 11,
     color: colors.textMuted,
+    marginTop: 1,
+  },
+  editIconBtn: {
+    padding: 6,
+    marginRight: 6,
   },
   roleBadge: {
     backgroundColor: colors.primaryLight,
@@ -96,6 +123,7 @@ export const styles = StyleSheet.create({
   },
   metaRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     marginTop: 4,
   },
   metaLabel: {
@@ -106,5 +134,20 @@ export const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '600',
     color: colors.textPrimary,
+  },
+  canteenTagRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: colors.borderLight,
+  },
+  canteenTagText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: colors.primaryDark,
+    flex: 1,
   },
 });

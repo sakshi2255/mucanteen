@@ -15,6 +15,10 @@ export const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: colors.borderLight,
   },
+  headerTextCol: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
   headerRole: {
     fontSize: 10,
     fontWeight: '800',
@@ -60,6 +64,10 @@ export const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
   },
+  toggleTextCol: {
+    flex: 1,
+    marginRight: spacing.sm,
+  },
   toggleTitle: {
     fontSize: typography.fontSizes.sm,
     fontWeight: typography.fontWeights.bold,
@@ -98,6 +106,12 @@ export const styles = StyleSheet.create({
     fontWeight: typography.fontWeights.heavy,
     marginTop: 4,
   },
+  metricSubtext: {
+    fontSize: 10,
+    color: colors.textSecondary,
+    marginTop: 2,
+    fontWeight: '600',
+  },
   sectionHeading: {
     fontSize: typography.fontSizes.xs,
     fontWeight: '800',
@@ -105,13 +119,29 @@ export const styles = StyleSheet.create({
     letterSpacing: 0.5,
     marginBottom: spacing.sm,
     textTransform: 'uppercase',
-  },toggleTextCol: { flex: 1 },
-  metricQueue: { borderLeftColor: '#F59E0B' },
-  metricPreparing: { borderLeftColor: '#0284C7' },
-  metricReady: { borderLeftColor: colors.accentGreen },
-  metricRevenue: { borderLeftColor: colors.primary },
-  valueQueue: { color: '#B45309' },
-  valuePreparing: { color: '#0369A1' },
-  valueReady: { color: '#047857' },
-  valueRevenue: { color: colors.primaryDark },
+  },
+  metricQueue: {
+    borderLeftColor: '#F59E0B',
+  },
+  metricPreparing: {
+    borderLeftColor: '#0284C7',
+  },
+  metricReady: {
+    borderLeftColor: colors.accentGreen,
+  },
+  metricRevenue: {
+    borderLeftColor: colors.primary,
+  },
+  valueQueue: {
+    color: '#B45309',
+  },
+  valuePreparing: {
+    color: '#0369A1',
+  },
+  valueReady: {
+    color: '#047857',
+  },
+  valueRevenue: {
+    color: colors.primaryDark,
+  },
 });
